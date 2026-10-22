@@ -1,13 +1,18 @@
-// Monta os links internos. No site normal, "/brasileirao/placar/3-2".
-// Na prévia (PUBLIC_PREVIEW=1, hospedagem sem URLs bonitas), vira
-// "brasileirao/placar/3-2.html", resolvido pela tag <base> de cada página.
+// Monta os links internos. No site normal, "/brasileirao/placar/3-2" (em inglês,
+// "/en/brasileirao/placar/3-2"). Na prévia (PUBLIC_PREVIEW=1, hospedagem sem URLs
+// bonitas), vira "brasileirao/placar/3-2.html", resolvido pela tag <base> de cada página.
+import type { Lang } from "./i18n";
+
 export const PREVIEW = import.meta.env.PUBLIC_PREVIEW === "1";
 
-export function href(path: string): string {
-  if (!PREVIEW) return `/${path}`;
-  const i = path.search(/[?#]/);
-  const page = i < 0 ? path : path.slice(0, i);
-  const suffix = i < 0 ? "" : path.slice(i);
+/** Caminho sem idioma ("sobre") para o idioma pedido. O português fica na raiz. */
+export function href(path: string, lang: Lang = "pt"): string {
+  const full = lang === "pt" ? path : path ? `${lang}/${path}` : lang;
+  if (!PREVIEW) return `/${full}`;
+  const i = full.search(/[?#]/);
+  const page = i < 0 ? full : full.slice(0, i);
+  const suffix = i < 0 ? "" : full.slice(i);
+  // A home em inglês sai como "en.html" (e não "en/index.html").
   return `${page || "index"}.html${suffix}`;
 }
 
@@ -22,9 +27,9 @@ export function previewBase(pathname: string): string | undefined {
 
 // Páginas de temporada, placar e time. A prévia tem limite de arquivos, então
 // lá cada tipo é uma página só, desenhada no navegador a partir da query.
-export const seasonHref = (liga: string, season: number) =>
-  PREVIEW ? href(`temporada?liga=${liga}&ano=${season}`) : href(`${liga}/scorigamis/${season}`);
-export const scorePageHref = (liga: string, key: string) =>
-  PREVIEW ? href(`placar?liga=${liga}&p=${key}`) : href(`${liga}/placar/${key}`);
-export const clubPageHref = (liga: string, slug: string) =>
-  PREVIEW ? href(`time?liga=${liga}&t=${slug}`) : href(`${liga}/time/${slug}`);
+export const seasonHref = (lang: Lang, liga: string, season: number) =>
+  href(PREVIEW ? `temporada?liga=${liga}&ano=${season}` : `${liga}/scorigamis/${season}`, lang);
+export const scorePageHref = (lang: Lang, liga: string, key: string) =>
+  href(PREVIEW ? `placar?liga=${liga}&p=${key}` : `${liga}/placar/${key}`, lang);
+export const clubPageHref = (lang: Lang, liga: string, slug: string) =>
+  href(PREVIEW ? `time?liga=${liga}&t=${slug}` : `${liga}/time/${slug}`, lang);

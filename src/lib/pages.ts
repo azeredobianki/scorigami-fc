@@ -4,7 +4,6 @@ import {
   buildCells,
   exclusiveScores,
   forClub,
-  g,
   gridSize,
   hi,
   lo,
@@ -14,8 +13,9 @@ import {
   yearsSince,
   type Match,
 } from "./core";
+import { t, type Lang } from "./i18n";
 import { href, scorePageHref, seasonHref } from "./links";
-import { clubLink, esc, fmtInt, fmtLong, gridHtml, legendHtml, matchLine, plural, resultLine, scorigamiListHtml, times, type Ctx } from "./render";
+import { clubLink, esc, fmtInt, fmtLong, gridHtml, legendHtml, matchLine, resultLine, scorigamiListHtml, times, type Ctx } from "./render";
 
 export interface LeagueInfo {
   slug: string;
@@ -27,6 +27,7 @@ export interface LeagueInfo {
 
 /** Pseudo-liga com todas as competições juntas (páginas de placar do filtro Geral). */
 export const ALL: LeagueInfo = { slug: "todas", name: "todas as competições", short: "todas as competições" };
+export const allLeague = (lang: Lang): LeagueInfo => ({ ...ALL, name: t(lang).allShort, short: t(lang).allShort });
 const isAll = (lg: LeagueInfo) => lg.slug === ALL.slug;
 
 export interface Page {
@@ -70,40 +71,37 @@ export function scorePage(ctx: Ctx, lg: LeagueInfo, all: Match[], key: string): 
       if (na >= 0 && nb >= 0 && nb <= na) nearby.push({ a: na, b: nb, count: cells.get(`${na}-${nb}`)?.count ?? 0 });
     }
 
-  const no = isAll(lg) ? "em" : g(lg, "no", "na");
-  const title = `Já houve ${a}–${b} ${no} ${lg.short}?`;
-  const description = count
-    ? `Sim: o placar ${a}–${b} aconteceu ${plural(count, "vez", "vezes")} ${no} ${lg.name}, a última em ${fmtLong(last.date)}.`
-    : `Nunca: o placar ${a}–${b} ainda não aconteceu ${no} ${lg.name}.`;
+  const T = ctx.t;
+  const sc = `${a}–${b}`;
+  const title = T.scoreTitle(sc, lg);
+  const description = count ? T.scoreDescYes(sc, count, lg, fmtLong(ctx, last.date)) : T.scoreDescNo(sc, lg);
   const gameLine = (m: Match) =>
-    `<a href="${seasonHref(m.league, m.season)}">${fmtLong(m.date)}</a>, ${resultLine(ctx, m)} (${matchLine(ctx, m, false)})${
+    `<a href="${seasonHref(ctx.lang, m.league, m.season)}">${fmtLong(ctx, m.date)}</a>, ${resultLine(ctx, m)} (${matchLine(ctx, m, false)})${
       isAll(lg) ? ` <span class="muted">· ${esc(ctx.leagueName(m.league))}</span>` : ""
     }`;
 
-  let html = `<h1>${esc(title)}</h1><p class="answer">${count ? `Sim, ${times(count)}.` : "Nunca."}</p>`;
-  if (count === 1) html += `<p>A única vez: ${gameLine(first)}.</p>`;
+  let html = `<h1>${esc(title)}</h1><p class="answer">${count ? T.answerYes(times(ctx, count)) : T.answerNo}</p>`;
+  if (count === 1) html += `<p>${T.onlyTime(gameLine(first))}</p>`;
   if (count > 1) {
-    html += `<p>A primeira vez: ${gameLine(first)}.</p>`;
-    html += `<p>A última vez: ${gameLine(last)}${years >= 1 ? `, há ${plural(years, "ano", "anos")}` : ""}.</p>`;
-    if (a !== b) html += `<p class="muted">Vitórias do mandante: ${fmtInt(homeWins)}. Vitórias do visitante: ${fmtInt(awayWins)}.</p>`;
+    html += `<p>${T.firstTime(gameLine(first))}</p>`;
+    html += `<p>${T.lastTime(gameLine(last), years)}</p>`;
+    if (a !== b) html += `<p class="muted">${T.homeAway(homeWins, awayWins)}</p>`;
   }
-  if (unseen) {
-    html += `<p>Seria uma scorigami. Pela média de gols ${isAll(lg) ? "de" : g(lg, "do", "da")} ${esc(lg.short)}, a chance de um jogo terminar ${a}–${b} é de cerca de 1 em ${fmtInt(Math.round(1 / unseen.probability))}.</p>`;
-  }
-  html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all, { mode: "norm", ring: new Set([key]) })}${legendHtml()}</div>`;
-  html += `<h2>Placares próximos</h2><ol class="list">${nearby
+  if (unseen) html += `<p>${esc(T.wouldBe(sc, lg, Math.round(1 / unseen.probability)))}</p>`;
+  html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all, { mode: "norm", ring: new Set([key]) })}${legendHtml(ctx)}</div>`;
+  html += `<h2>${T.nearby}</h2><ol class="list">${nearby
     .map((n) =>
       n.a === a && n.b === b
-        ? `<li><span class="score">${n.a}–${n.b}</span> ${times(n.count)}</li>`
-        : `<li><a class="score" href="${scorePageHref(liga, `${n.a}-${n.b}`)}">${n.a}–${n.b}</a> ${times(n.count)}</li>`,
+        ? `<li><span class="score">${n.a}–${n.b}</span> ${times(ctx, n.count)}</li>`
+        : `<li><a class="score" href="${scorePageHref(ctx.lang, liga, `${n.a}-${n.b}`)}">${n.a}–${n.b}</a> ${times(ctx, n.count)}</li>`,
     )
     .join("")}</ol>`;
   if (count > 1) {
-    html += `<h2>Todos os jogos${count > LIMIT ? ` <span class="muted">(os ${LIMIT} mais recentes)</span>` : ""}</h2><ol class="list">${games
+    html += `<h2>${T.allGames}${count > LIMIT ? ` <span class="muted">${T.mostRecent(LIMIT)}</span>` : ""}</h2><ol class="list">${games
       .slice(0, LIMIT)
       .map((m) => {
-        const notes = [isAll(lg) ? ctx.leagueName(m.league) : "", m.note ?? ""].filter(Boolean).join(" · ");
-        return `<li><span class="date">${fmtLong(m.date)}</span> ${matchLine(ctx, m)}${notes ? `<span class="muted"> · ${esc(notes)}</span>` : ""}</li>`;
+        const notes = [isAll(lg) ? ctx.leagueName(m.league) : "", m.note ? T.note(m.note) : ""].filter(Boolean).join(" · ");
+        return `<li><span class="date">${fmtLong(ctx, m.date)}</span> ${matchLine(ctx, m)}${notes ? `<span class="muted"> · ${esc(notes)}</span>` : ""}</li>`;
       })
       .join("")}</ol>`;
   }
@@ -121,7 +119,8 @@ export function clubPage(ctx: Ctx, lg: LeagueInfo, all: Match[], slug: string): 
   const myCells = buildCells(mine);
   const seasons = seasonsOf(mine);
   const current = all.reduce((x, m) => Math.max(x, m.season), 0);
-  const span = `${S(seasons[0])}–${seasons[seasons.length - 1] === current ? "hoje" : S(seasons[seasons.length - 1])}`;
+  const T = ctx.t;
+  const span = `${S(seasons[0])}–${seasons[seasons.length - 1] === current ? T.today : S(seasons[seasons.length - 1])}`;
 
   let w = 0, d = 0, l = 0;
   for (const m of mine) {
@@ -130,7 +129,7 @@ export function clubPage(ctx: Ctx, lg: LeagueInfo, all: Match[], slug: string): 
     else if (r.gf === r.ga) d++;
     else l++;
   }
-  const pct = ((w / mine.length) * 100).toFixed(1).replace(".", ",");
+  const pct = T.pct((w / mine.length) * 100);
   const myScorigamis = scorigamis(all).filter((m) => m.home === slug || m.away === slug).reverse();
   const exclusive = new Set((exclusiveScores(all, leagueCells).find((e) => e.club === slug)?.scores ?? []).map((x) => x.key));
 
@@ -155,58 +154,55 @@ export function clubPage(ctx: Ctx, lg: LeagueInfo, all: Match[], slug: string): 
 
   const outcome = (m: Match) => {
     const r = forClub(m, slug);
-    const res = r.gf > r.ga ? "V" : r.gf < r.ga ? "D" : "E";
-    const verb = r.gf > r.ga ? "sobre" : r.gf < r.ga ? "para" : "com";
-    return { res, verb, r };
+    const k = r.gf > r.ga ? "w" : r.gf < r.ga ? "l" : "d";
+    return { res: T.res[k], verb: T.vs[k], r };
   };
   const scorigamiItem = (m: Match) => {
     const { res, verb, r } = outcome(m);
-    return `<li><span class="date">${fmtLong(m.date)}</span> <span class="muted">${res}</span> <a class="score" href="${scorePageHref(liga, `${hi(m)}-${lo(m)}`)}">${r.gf}–${r.ga}</a> ${verb} ${clubLink(ctx, r.opp, m.season)}</li>`;
+    return `<li><span class="date">${fmtLong(ctx, m.date)}</span> <span class="muted">${res}</span> <a class="score" href="${scorePageHref(ctx.lang, liga, `${hi(m)}-${lo(m)}`)}">${r.gf}–${r.ga}</a> ${verb} ${clubLink(ctx, r.opp, m.season)}</li>`;
   };
-  const scoreLink = (key: string, a: number, b: number) => `<a class="score" href="${scorePageHref(liga, key)}">${a}–${b}</a>`;
+  const scoreLink = (key: string, a: number, b: number) => `<a class="score" href="${scorePageHref(ctx.lang, liga, key)}">${a}–${b}</a>`;
   const SHOW = 25;
-  const o = g(lg, "o", "a");
-  const all_ = g(lg, "Todo o", "Toda a");
+  const N = (n: number) => fmtInt(ctx, n);
 
-  let html = `<a class="back" href="${href(`${liga}/times`)}">← Todos os times</a><h1>${name}</h1><p class="muted">${span}</p>`;
-  html += `<p>${plural(mine.length, "partida", "partidas")} ${g(lg, "do", "da")} ${esc(lg.short)} desde ${S(seasons[0])} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}, placares finais que ${o} ${esc(lg.short)} nunca tinha visto.</p>`;
-  html += `<div class="stats"><div><b>${fmtInt(mine.length)}</b><span>Jogos</span></div><div><b>${fmtInt(w)}</b><span>Vitórias</span></div><div><b>${fmtInt(d)}</b><span>Empates</span></div><div><b>${fmtInt(l)}</b><span>Derrotas</span></div><div><b>${myScorigamis.length}</b><span>Scorigamis</span></div></div>`;
-  html += `<p class="muted">${pct}% de vitórias · ${plural(myCells.size, "placar final diferente", "placares finais diferentes")}</p>`;
+  let html = `<a class="back" href="${href(`${liga}/times`, ctx.lang)}">${T.allTeams}</a><h1>${name}</h1><p class="muted">${span}</p>`;
+  html += `<p>${esc(T.clubIntro(mine.length, lg, S(seasons[0]), myScorigamis.length))}</p>`;
+  html += `<div class="stats"><div><b>${N(mine.length)}</b><span>${T.stGames}</span></div><div><b>${N(w)}</b><span>${T.stWins}</span></div><div><b>${N(d)}</b><span>${T.stDraws}</span></div><div><b>${N(l)}</b><span>${T.stLosses}</span></div><div><b>${myScorigamis.length}</b><span>Scorigamis</span></div></div>`;
+  html += `<p class="muted">${T.winPct(pct, myCells.size)}</p>`;
   if (nameEras.size > 1) {
-    html += `<h2>Nomes ao longo do tempo</h2><ol class="list">${[...nameEras.entries()]
-      .map(([n, e]) => `<li>${esc(n)}, ${e.from === e.to ? S(e.from) : `${S(e.from)}–${S(e.to)}`}, ${plural(e.games, "jogo", "jogos")}</li>`)
+    html += `<h2>${T.namesOverTime}</h2><ol class="list">${[...nameEras.entries()]
+      .map(([n, e]) => `<li>${esc(n)}, ${e.from === e.to ? S(e.from) : `${S(e.from)}–${S(e.to)}`}, ${T.nGames(e.games)}</li>`)
       .join("")}</ol>`;
   }
-  html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all, { mode: "norm", size: gridSize(all), ring: new Set(myScorigamis.map((m) => `${hi(m)}-${lo(m)}`)) })}${legendHtml()}</div>`;
-  html += `<p class="muted">Contornadas em vermelho: scorigamis em jogos deste clube.</p>`;
-  html += `<h2>Finais mais raros</h2><p>Placares deste clube que ${o} ${esc(lg.short)} menos viu. ${
-    onlyHere > 0 ? `${plural(onlyHere, "deles só aconteceu", "deles só aconteceram")} em jogos deste clube.` : ""
-  }</p>`;
-  html += `<div class="table-scroll"><table class="data"><caption>Jogo mais recente do clube com cada placar</caption><thead><tr><th>Placar</th><th>${name}</th><th class="n">${all_} ${esc(lg.short)}</th></tr></thead><tbody>${rarest
+  html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all, { mode: "norm", size: gridSize(all), ring: new Set(myScorigamis.map((m) => `${hi(m)}-${lo(m)}`)) })}${legendHtml(ctx)}</div>`;
+  html += `<p class="muted">${T.ringedClub}</p>`;
+  html += `<h2>${T.rarest}</h2><p>${esc(T.rarestText(lg, onlyHere))}</p>`;
+  const thAll = esc(T.thAll(lg));
+  html += `<div class="table-scroll"><table class="data"><caption>${T.rarestCaption}</caption><thead><tr><th>${T.thScore}</th><th>${name}</th><th class="n">${thAll}</th></tr></thead><tbody>${rarest
     .map((r) => {
       const { verb, r: x } = outcome(r.m);
-      return `<tr><td>${scoreLink(r.cell.key, r.cell.a, r.cell.b)}</td><td>${fmtLong(r.m.date)} <span class="muted">${verb}</span> ${clubLink(ctx, x.opp, r.m.season)}</td><td class="n">${times(r.league)}</td></tr>`;
+      return `<tr><td>${scoreLink(r.cell.key, r.cell.a, r.cell.b)}</td><td>${fmtLong(ctx, r.m.date)} <span class="muted">${verb}</span> ${clubLink(ctx, x.opp, r.m.season)}</td><td class="n">${times(ctx, r.league)}</td></tr>`;
     })
     .join("")}</tbody></table></div>`;
-  html += `<h2>Finais mais comuns</h2><p>Placares que este clube mais repetiu.</p>`;
-  html += `<div class="table-scroll"><table class="data"><thead><tr><th>Placar</th><th class="n">${name}</th><th class="n">${all_} ${esc(lg.short)}</th></tr></thead><tbody>${common
-    .map((r) => `<tr><td>${scoreLink(r.cell.key, r.cell.a, r.cell.b)}</td><td class="n">${times(r.cell.count)}</td><td class="n">${times(r.league)}</td></tr>`)
+  html += `<h2>${T.commonest}</h2><p>${T.commonestText}</p>`;
+  html += `<div class="table-scroll"><table class="data"><thead><tr><th>${T.thScore}</th><th class="n">${name}</th><th class="n">${thAll}</th></tr></thead><tbody>${common
+    .map((r) => `<tr><td>${scoreLink(r.cell.key, r.cell.a, r.cell.b)}</td><td class="n">${times(ctx, r.cell.count)}</td><td class="n">${times(ctx, r.league)}</td></tr>`)
     .join("")}</tbody></table></div>`;
   html += `<h2>Scorigamis (${myScorigamis.length})</h2>`;
   if (myScorigamis.length) {
-    html += `<p>Jogos deste clube que terminaram com um placar inédito ${g(lg, "no", "na")} ${esc(lg.short)}, do mais recente ao mais antigo.</p>`;
+    html += `<p>${esc(T.clubScorigamisText(lg))}</p>`;
     html += `<ol class="list">${myScorigamis.slice(0, SHOW).map(scorigamiItem).join("")}</ol>`;
     if (myScorigamis.length > SHOW) {
-      html += `<details class="all"><summary>Mostrar todas as ${myScorigamis.length}</summary><ol class="list" start="${SHOW + 1}">${myScorigamis
+      html += `<details class="all"><summary>${T.showAll(myScorigamis.length)}</summary><ol class="list" start="${SHOW + 1}">${myScorigamis
         .slice(SHOW)
         .map(scorigamiItem)
         .join("")}</ol></details>`;
     }
-  } else html += `<p class="muted">Nenhuma scorigami ainda.</p>`;
+  } else html += `<p class="muted">${T.noScorigamiYet}</p>`;
 
   return {
-    title: `Scorigamis do ${ctx.clubName(slug)}`,
-    description: `${ctx.clubName(slug)} ${g(lg, "no", "na")} ${lg.name}: ${plural(mine.length, "jogo", "jogos")} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}.`,
+    title: T.clubTitle(ctx.clubName(slug)),
+    description: T.clubDesc(ctx.clubName(slug), lg, mine.length, myScorigamis.length),
     html,
   };
 }
@@ -225,20 +221,20 @@ export function seasonPage(ctx: Ctx, lg: LeagueInfo, all: Match[], season: numbe
   const idx = seasons.indexOf(season);
   const [prev, next] = [seasons[idx - 1], seasons[idx + 1]];
 
-  let html = `<a class="back" href="${href(`${liga}/scorigamis`)}">← Todas as temporadas</a><h1>${esc(lg.short)} ${S(season)}</h1>`;
-  if (stages.length) html += `<p class="muted">${esc(stages.join(" e "))}</p>`;
-  html += `<p class="answer">${mine.length ? plural(mine.length, "scorigami", "scorigamis") : "Nenhuma scorigami"}</p>`;
-  html += `<p class="muted">${rank}ª de ${seasons.length} temporadas em placares novos · ${fmtInt(games)} jogos</p>`;
+  const T = ctx.t;
+  let html = `<a class="back" href="${href(`${liga}/scorigamis`, ctx.lang)}">${T.allSeasons}</a><h1>${esc(lg.short)} ${S(season)}</h1>`;
+  if (stages.length) html += `<p class="muted">${esc(T.join(stages))}</p>`;
+  html += `<p class="answer">${mine.length ? T.nScorigamis(mine.length) : T.noneScorigami}</p>`;
+  html += `<p class="muted">${T.seasonRank(rank, seasons.length, games)}</p>`;
   if (mine.length) html += scorigamiListHtml(ctx, mine);
-  html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all.filter((m) => m.season <= season), { mode: "norm", ring: new Set(mine.map((m) => `${hi(m)}-${lo(m)}`)) })}${legendHtml()}</div>`;
-  html += `<p class="muted">O gráfico mostra todos os jogos até o fim de ${S(season)}. Contornadas: as scorigamis da temporada.</p>`;
-  html += `<nav class="pager">${prev !== undefined ? `<a href="${seasonHref(liga, prev)}">← ${S(prev)}</a>` : "<span></span>"}${
-    next !== undefined ? `<a href="${seasonHref(liga, next)}">${S(next)} →</a>` : "<span></span>"
+  html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all.filter((m) => m.season <= season), { mode: "norm", ring: new Set(mine.map((m) => `${hi(m)}-${lo(m)}`)) })}${legendHtml(ctx)}</div>`;
+  html += `<p class="muted">${T.seasonGridNote(S(season))}</p>`;
+  html += `<nav class="pager">${prev !== undefined ? `<a href="${seasonHref(ctx.lang, liga, prev)}">← ${S(prev)}</a>` : "<span></span>"}${
+    next !== undefined ? `<a href="${seasonHref(ctx.lang, liga, next)}">${S(next)} →</a>` : "<span></span>"
   }</nav>`;
   return {
-    title: `Scorigamis ${g(lg, "do", "da")} ${lg.short} ${S(season)}`,
-    description: `${plural(mine.length, "scorigami", "scorigamis")} ${g(lg, "no", "na")} ${lg.name} ${S(season)}: os placares que aconteceram pela primeira vez.`,
+    title: T.seasonTitle(lg, S(season)),
+    description: T.seasonDesc(mine.length, lg, S(season)),
     html,
   };
 }
-

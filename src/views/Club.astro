@@ -1,0 +1,14 @@
+---
+import Base from "../layouts/Base.astro";
+import { serverCtx } from "../lib/ctx";
+import { league, leagueMatches } from "../lib/data";
+import type { Lang } from "../lib/i18n";
+import { clubPage } from "../lib/pages";
+
+const { lang, liga, slug } = Astro.props as { lang: Lang; liga: string; slug: string };
+const page = clubPage(serverCtx(liga, lang), league(liga), leagueMatches(liga), slug);
+---
+
+<Base lang={lang} title={page.title} description={page.description} active="times" liga={liga}>
+  <Fragment set:html={page.html} />
+</Base>

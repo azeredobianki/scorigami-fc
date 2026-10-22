@@ -1,18 +1,19 @@
 // Filtros da home: competições, times e eras (cada um com várias escolhas),
 // tipo de gráfico e cor. O estado fica na URL (?liga=a,b&time=x&era=y&mando=1&cor=first)
 // para que um recorte possa ser compartilhado.
-import { buildCells, g, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
+import { buildCells, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
 import { eras, type Era } from "../lib/eras";
-import { esc, fmtInt, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
+import { esc, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
+import { pageLang, t } from "../lib/i18n";
 import { href } from "../lib/links";
 import { loadData } from "./client-data";
 import { paintGrid } from "./paint";
 
 type Color = "first" | "freq";
 
-const joinPt = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : xs[0] ?? "");
-
 export async function initHome() {
+  const lang = pageLang();
+  const T = t(lang);
   const form = document.getElementById("filters") as HTMLFormElement;
   const buttons = [...form.querySelectorAll<HTMLButtonElement>(".switch button[data-mode]")];
   const colorButtons = [...form.querySelectorAll<HTMLButtonElement>(".switch button[data-color]")];
@@ -75,11 +76,11 @@ export async function initHome() {
     eraKey = key;
     const keep = wantedEras ?? new Set(checked("era"));
     wantedEras = null;
-    eraList = eras([...new Set(pool.map((m) => m.season))], ligas.length === 1 ? ligas[0] : "").slice(1);
+    eraList = eras([...new Set(pool.map((m) => m.season))], ligas.length === 1 ? ligas[0] : "", lang).slice(1);
     $("era-menu").innerHTML =
       eraList
         .map((e) => `<label><input type="checkbox" name="era" value="${e.id}"${keep.has(e.id) ? " checked" : ""} /> ${esc(e.label)}</label>`)
-        .join("") + `<button type="button" class="clear">Limpar</button>`;
+        .join("") + `<button type="button" class="clear">${T.clear}</button>`;
     $("era-menu")
       .querySelector("button.clear")!
       .addEventListener("click", () => {
@@ -90,7 +91,7 @@ export async function initHome() {
 
   function summary(name: string, labels: string[], all: string) {
     const el = menu(name).querySelector(".sum")!;
-    el.textContent = !labels.length ? all : labels.length <= 2 ? labels.join(", ") : `${labels.length} selecionados`;
+    el.textContent = !labels.length ? all : labels.length <= 2 ? labels.join(", ") : T.nSelected(labels.length);
   }
 
   function update(push: boolean) {
@@ -107,9 +108,9 @@ export async function initHome() {
 
     buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
     colorButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.color === color)));
-    summary("liga", ligas.map((s) => leagueOf.get(s)!.short), "Geral: todas");
-    summary("time", [...times].map((s) => data.ctx("todas").clubName(s)), "Todos");
-    summary("era", picked.map((e) => e.label.replace(/ \(.*\)$/, "")), "Todas");
+    summary("liga", ligas.map((s) => leagueOf.get(s)!.short), T.allGeneral);
+    summary("time", [...times].map((s) => data.ctx("todas").clubName(s)), T.allTeamsSum);
+    summary("era", picked.map((e) => e.label.replace(/ \(.*\)$/, "")), T.allErasSum);
 
     const inEra = (m: Match) => !picked.length || picked.some((e) => m.season >= e.from && m.season <= e.to);
     const keep = (m: Match) => (!times.size || times.has(m.home) || times.has(m.away)) && inEra(m);
@@ -120,17 +121,15 @@ export async function initHome() {
     const timeLeagues = new Set([...times].map((t) => clubLeague.get(t)));
     const ctx = data.ctx(one || (timeLeagues.size === 1 && !ligas.length ? [...timeLeagues][0]! : "todas"));
 
-    $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> / ${fmtInt(data.matches.length)} jogos`;
+    $("counter").innerHTML = T.showing(shown.length, data.matches.length);
     paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague), color });
     const [y0, y1] = seasonRange(shown);
     const yl = (s: number) => (one ? ctx.season(one, s) : String(s));
-    $("legend").innerHTML = shown.length ? legendHtml(color === "first" ? [yl(y0), yl(y1)] : undefined) : "";
+    $("legend").innerHTML = shown.length ? legendHtml(ctx, color === "first" ? [yl(y0), yl(y1)] : undefined) : "";
     const lg = leagueOf.get(one);
-    $("recent-title").textContent = `Últimas scorigamis ${
-      lg ? `${g(lg, "no", "na")} ${lg.short}` : ligas.length ? `em ${joinPt(ligas.map((s) => leagueOf.get(s)!.short))}` : "em todas as competições"
-    }`;
+    $("recent-title").textContent = T.recentTitle(lg ?? null, ligas.map((s) => leagueOf.get(s)!.short));
     $("recent").innerHTML = scorigamiListHtml(ctx, recent, mode);
-    $("all-scorigamis").setAttribute("href", href(one ? `${one}/scorigamis` : "scorigamis"));
+    $("all-scorigamis").setAttribute("href", href(one ? `${one}/scorigamis` : "scorigamis", lang));
     $("top").innerHTML = topScoresHtml(ctx, buildCells(shown, mode));
     $("highlights").innerHTML = highlightsHtml(ctx, shown, inLeague.filter(inEra));
 

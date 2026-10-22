@@ -1,0 +1,8 @@
+---
+// Página em en (cada idioma tem uma cópia desta rota). O conteúdo fica em src/views/Score.astro.
+import View from "../../../../views/Score.astro";
+import { paths } from "../../../../lib/paths";
+export const getStaticPaths = paths.score;
+---
+
+<View lang="en" {...Astro.params} />

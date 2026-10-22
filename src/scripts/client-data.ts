@@ -1,5 +1,6 @@
 // Carrega a base compacta e monta o contexto de renderização no navegador.
 import { seasonLabel, type Match } from "../lib/core";
+import { pageLang, t } from "../lib/i18n";
 import { dataUrl } from "../lib/links";
 import type { Ctx } from "../lib/render";
 
@@ -37,11 +38,12 @@ export async function loadData(): Promise<ClientData> {
   };
   const leagueName = (slug: string) => raw.leagues.find((l) => l.slug === slug)?.short ?? slug;
   const season = (slug: string, s: number) => seasonLabel(s, raw.leagues.find((l) => l.slug === slug)?.split);
+  const lang = pageLang();
   const today = matches.length ? matches[matches.length - 1].date : "";
   return {
     leagues: raw.leagues,
     clubs: raw.clubs,
     matches,
-    ctx: (linkLeague) => ({ clubName, leagueName, linkLeague, today, season }),
+    ctx: (linkLeague) => ({ clubName, leagueName, linkLeague, today, season, lang, t: t(lang) }),
   };
 }

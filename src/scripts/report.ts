@@ -1,6 +1,7 @@
 // Envio do formulário "Solicitar ajuste". Na prévia, os pedidos ficam no banco do
 // Artifact (só o dono lê). No site publicado, vão para PUBLIC_REPORT_ENDPOINT (um
 // serviço de formulários que recebe JSON por POST, como Formspree ou um Worker).
+import { pageLang, t } from "../lib/i18n";
 import { PREVIEW } from "../lib/links";
 
 const ENDPOINT = import.meta.env.PUBLIC_REPORT_ENDPOINT as string | undefined;
@@ -31,6 +32,7 @@ async function saveInPreview(report: Record<string, string>): Promise<boolean> {
 }
 
 export function initReport() {
+  const T = t(pageLang());
   const form = document.getElementById("report") as HTMLFormElement;
   const status = document.getElementById("report-status")!;
   const field = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
@@ -44,7 +46,7 @@ export function initReport() {
     const button = form.querySelector("button")!;
     const report = Object.fromEntries([...new FormData(form).entries()].map(([k, v]) => [k, String(v).trim()]));
     button.disabled = true;
-    status.textContent = "Enviando…";
+    status.textContent = T.rSending;
     try {
       let ok = false;
       if (PREVIEW) ok = await saveInPreview(report);
@@ -58,12 +60,12 @@ export function initReport() {
       }
       if (ok) {
         form.reset();
-        status.textContent = "Recebido, obrigado. Vamos conferir com as fontes.";
+        status.textContent = T.rOk;
       } else {
-        status.textContent = "Não deu para enviar daqui. Mande pelo X: @ScorigamiFC.";
+        status.textContent = T.rNoWay;
       }
     } catch {
-      status.textContent = "Não deu para enviar agora. Tente de novo ou mande pelo X: @ScorigamiFC.";
+      status.textContent = T.rFail;
     } finally {
       button.disabled = false;
     }

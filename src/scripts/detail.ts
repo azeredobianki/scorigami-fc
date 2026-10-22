@@ -1,6 +1,6 @@
 // Páginas de temporada, placar e time desenhadas no navegador. Só a prévia usa
 // (lá há limite de arquivos); o site normal gera uma página para cada uma.
-import { ALL, clubPage, scorePage, seasonPage, type Page } from "../lib/pages";
+import { ALL, allLeague, clubPage, scorePage, seasonPage, type Page } from "../lib/pages";
 import { loadData } from "./client-data";
 
 export async function initDetail(kind: "temporada" | "placar" | "time") {
@@ -18,11 +18,11 @@ export async function initDetail(kind: "temporada" | "placar" | "time") {
     const p = q.get("p") ?? "";
     const key = /^\d+-\d+$/.test(p) ? p : "1-0";
     // "todas": o placar no filtro Geral, com jogos de todas as competições.
-    page = q.get("liga") === ALL.slug ? scorePage(data.ctx(ALL.slug), ALL, data.matches, key) : scorePage(ctx, lg, all, key);
+    page = q.get("liga") === ALL.slug ? scorePage(data.ctx(ALL.slug), allLeague(ctx.lang), data.matches, key) : scorePage(ctx, lg, all, key);
   } else {
     const t = q.get("t") ?? "";
     const plays = all.some((m) => m.home === t || m.away === t);
-    page = plays ? clubPage(ctx, lg, all, t) : { title: "Time", description: "", html: `<p class="muted">Time não encontrado.</p>` };
+    page = plays ? clubPage(ctx, lg, all, t) : { title: ctx.t.teamWord, description: "", html: `<p class="muted">${ctx.t.teamNotFound}</p>` };
   }
   document.title = `${page.title} | Scorigami FC`;
   document.getElementById("detail")!.innerHTML = page.html;

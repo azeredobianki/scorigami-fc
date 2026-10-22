@@ -1,0 +1,63 @@
+---
+import Base from "../layouts/Base.astro";
+import { club, league, leagueMatches, seasonOf } from "../lib/data";
+import { t, type Lang } from "../lib/i18n";
+import { clubPageHref } from "../lib/links";
+
+const { lang, liga } = Astro.props as { lang: Lang; liga: string };
+const T = t(lang);
+const lg = league(liga);
+const all = leagueMatches(liga);
+const current = all.reduce((x, m) => Math.max(x, m.season), 0);
+const S = (s: number) => seasonOf(liga, s);
+const seasonsOf = new Map<string, Set<number>>();
+for (const m of all)
+  for (const c of [m.home, m.away]) {
+    const s = seasonsOf.get(c) ?? new Set<number>();
+    s.add(m.season);
+    seasonsOf.set(c, s);
+  }
+const rows = [...seasonsOf.entries()]
+  .map(([slug, set]) => {
+    const seasons = [...set].sort((a, b) => a - b);
+    const c = club(slug);
+    const old = (c.names ?? []).map((n) => n.name).filter((n) => n !== c.name);
+    const first = seasons[0];
+    const last = seasons[seasons.length - 1];
+    return {
+      slug,
+      name: c.name,
+      state: c.state,
+      old,
+      count: seasons.length,
+      years: last === current ? `${S(first)}–${T.today}` : first === last ? S(first) : `${S(first)}–${S(last)}`,
+      now: last === current,
+    };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name, T.locale));
+const groups = [
+  { title: T.teamsNow(lg, S(current)), rows: rows.filter((r) => r.now) },
+  { title: T.teamsBefore, rows: rows.filter((r) => !r.now) },
+];
+---
+
+<Base lang={lang} title={T.teamsTitle(lg)} description={T.teamsDesc(rows.length, lg)} active="times" liga={liga} switchTo="times">
+  <h1>{T.teamsTitle(lg)}</h1>
+  <p class="lede">{T.teamsLede(rows.length, lg)}</p>
+  {
+    groups.map((g) => (
+      <>
+        <h2>{g.title}</h2>
+        <ul class="team-list">
+          {g.rows.map((r) => (
+            <li>
+              <a href={clubPageHref(lang, liga, r.slug)}>{r.name}</a>
+              <span class="years">{r.years} · {T.nSeasons(r.count)}</span>
+              {r.old.length > 0 && <span class="formerly">{T.formerly} {r.old.join(", ")}</span>}
+            </li>
+          ))}
+        </ul>
+      </>
+    ))
+  }
+</Base>

@@ -1,0 +1,60 @@
+---
+// Scorigamis em todas as competições juntas: o placar só conta se nunca tinha
+// acontecido em nenhuma das ligas.
+import Base from "../layouts/Base.astro";
+import { scorigamis } from "../lib/core";
+import { serverCtx } from "../lib/ctx";
+import { leagues, matches } from "../lib/data";
+import { scorigamiListHtml } from "../lib/render";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang } = Astro.props as { lang: Lang };
+const T = t(lang);
+
+const ctx = serverCtx(undefined, lang);
+const list = scorigamis(matches, "norm", true);
+const year = (d: string) => Number(d.slice(0, 4));
+const years: number[] = [];
+for (let y = year(matches[0].date); y <= year(matches[matches.length - 1].date); y++) years.push(y);
+const perYear = years.map((y) => ({ y, count: list.filter((m) => year(m.date) === y).length }));
+const max = perYear.reduce((x, p) => Math.max(x, p.count), 1);
+const decades = years.filter((y) => y % 10 === 0);
+const pos = (y: number) => ((years.indexOf(y) + 0.5) / years.length) * 100;
+const byLeague = leagues
+  .map((l) => ({ l, n: list.filter((m) => m.league === l.slug).length }))
+  .filter((x) => x.n)
+  .sort((a, b) => b.n - a.n);
+const last = list[list.length - 1];
+---
+
+<Base
+  lang={lang}
+  title={T.scorigamisAllTitle}
+  description={T.scorigamisAllDesc(list.length, leagues.length)}
+  active="scorigamis"
+  switchTo="scorigamis"
+  geral
+>
+  <h1>Scorigamis</h1>
+  <p>{T.scorigamisAllIntro(leagues.length, list.length, year(last.date))}</p>
+  <p class="muted">
+    {byLeague.map((x, i) => `${x.l.short}: ${x.n}${i < byLeague.length - 1 ? " · " : ""}`).join("")}
+  </p>
+
+  <h2>{T.perYear}</h2>
+  <div class="seasons" role="img" aria-label={T.perYearLabel}>
+    {perYear.map((p) => (
+      <span
+        style={`height:${p.count ? Math.max(2, (p.count / max) * 100) : 0}%`}
+        data-k={String(p.y)}
+        data-tip={T.nScorigamis(p.count)}
+      />
+    ))}
+  </div>
+  <div class="decades" aria-hidden="true">
+    {decades.map((d) => <span style={`left:${pos(d)}%`}>{d}</span>)}
+  </div>
+
+  <h2>{T.allFromRecent}</h2>
+  <Fragment set:html={scorigamiListHtml(ctx, [...list].reverse())} />
+</Base>

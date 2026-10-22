@@ -1,21 +1,8 @@
 ---
-import Base from "../../../layouts/Base.astro";
-import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues } from "../../../lib/data";
-import { PREVIEW } from "../../../lib/links";
-import { clubPage } from "../../../lib/pages";
-
-export function getStaticPaths() {
-  if (PREVIEW) return [];
-  return leagues.flatMap((l) =>
-    [...new Set(leagueMatches(l.slug).flatMap((m) => [m.home, m.away]))].map((slug) => ({ params: { liga: l.slug, slug } })),
-  );
-}
-
-const { liga, slug } = Astro.params as { liga: string; slug: string };
-const page = clubPage(serverCtx(liga), league(liga), leagueMatches(liga), slug);
+// Página em pt (cada idioma tem uma cópia desta rota). O conteúdo fica em src/views/Club.astro.
+import View from "../../../views/Club.astro";
+import { paths } from "../../../lib/paths";
+export const getStaticPaths = paths.club;
 ---
 
-<Base title={page.title} description={page.description} active="times" liga={liga}>
-  <Fragment set:html={page.html} />
-</Base>
+<View lang="pt" {...Astro.params} />

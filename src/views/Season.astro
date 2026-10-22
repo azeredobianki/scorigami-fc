@@ -1,0 +1,25 @@
+---
+import Base from "../layouts/Base.astro";
+import { serverCtx } from "../lib/ctx";
+import { league, leagueMatches } from "../lib/data";
+import type { Lang } from "../lib/i18n";
+import { seasonPage } from "../lib/pages";
+
+const { lang, liga, ano } = Astro.props as { lang: Lang; liga: string; ano: string };
+const season = Number(ano);
+const all = leagueMatches(liga);
+// Fases do Brasileirão antigo (Taça Brasil, Robertão) quando a temporada teve mais de uma competição.
+const stages = [
+  ...new Set(
+    all
+      .filter((m) => m.season === season)
+      .map((m) => m.stage?.split(" - ")[0])
+      .filter((s): s is string => !!s && /Taça|Robertão/.test(s)),
+  ),
+];
+const page = seasonPage(serverCtx(liga, lang), league(liga), all, season, stages);
+---
+
+<Base lang={lang} title={page.title} description={page.description} active="scorigamis" liga={liga}>
+  <Fragment set:html={page.html} />
+</Base>

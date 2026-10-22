@@ -1,9 +1,11 @@
 ---
 import { href, previewBase } from "../lib/links";
+import { HTML_LANG, LANG_LABEL, LANG_SHORT, LANGS, t, type Lang } from "../lib/i18n";
 import "../styles/global.css";
 import { leagues } from "../lib/data";
 
 interface Props {
+  lang: Lang;
   title: string;
   description: string;
   active?: "grafico" | "scorigamis" | "times" | "timelapse" | "sobre";
@@ -14,21 +16,31 @@ interface Props {
   /** Página "Geral" (todas as competições) da seção de abas. */
   geral?: boolean;
 }
-const { title, description, active, switchTo, geral } = Astro.props;
+const { lang, title, description, active, switchTo, geral } = Astro.props;
+const T = t(lang);
+const h = (path: string) => href(path, lang);
 const liga = Astro.props.liga ?? leagues[0].slug;
 const nav = [
-  { id: "grafico", label: "Gráfico", href: href("") },
-  { id: "scorigamis", label: "Scorigamis", href: href(Astro.props.liga ? `${liga}/scorigamis` : "scorigamis") },
-  { id: "times", label: "Times", href: href(`${liga}/times`) },
-  { id: "timelapse", label: "Time-lapse", href: href("timelapse") },
+  { id: "grafico", label: T.nav.grafico, href: h("") },
+  { id: "scorigamis", label: T.nav.scorigamis, href: h(Astro.props.liga ? `${liga}/scorigamis` : "scorigamis") },
+  { id: "times", label: T.nav.times, href: h(`${liga}/times`) },
+  { id: "timelapse", label: T.nav.timelapse, href: h("timelapse") },
 ];
+// A mesma página nos outros idiomas: o caminho sem o prefixo do idioma.
+const rest = Astro.url.pathname
+  .replace(/^\/+/, "")
+  .replace(/\.html$/, "")
+  .replace(/^(en|es)(\/|$)/, "")
+  .replace(/(^|\/)index$/, "")
+  .replace(/\/$/, "");
+const alternates = LANGS.map((l) => ({ lang: l, href: href(rest, l) }));
 const fullTitle = title === "Scorigami FC" ? title : `${title} | Scorigami FC`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const base = previewBase(Astro.url.pathname);
 ---
 
 <!doctype html>
-<html lang="pt-BR">
+<html lang={HTML_LANG[lang]}>
   <head>
     <meta charset="utf-8" />
     {base && <base href={base} />}
@@ -47,6 +59,7 @@ const base = previewBase(Astro.url.pathname);
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
+    {alternates.map((a) => <link rel="alternate" hreflang={HTML_LANG[a.lang]} href={new URL(href(rest, a.lang).replace(/\.html$/, ""), Astro.site)} />)}
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@ScorigamiFC" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -56,21 +69,26 @@ const base = previewBase(Astro.url.pathname);
   </head>
   <body>
     <header class="site">
-      <a class="brand" href={href("")}>Scorigami FC</a>
+      <a class="brand" href={h("")}>Scorigami FC</a>
       <nav>
         {nav.map((n) => <a href={n.href} aria-current={active === n.id ? "page" : undefined}>{n.label}</a>)}
-        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar modo escuro" title="Modo escuro"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label={T.themeLabel} title={T.themeTitle}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+        <span class="langs" role="group" aria-label={T.langLabel}>
+          {alternates.map((a) => (
+            <a href={a.href} hreflang={HTML_LANG[a.lang]} lang={HTML_LANG[a.lang]} title={LANG_LABEL[a.lang]} aria-current={a.lang === lang ? "true" : undefined} data-lang-link>{LANG_SHORT[a.lang]}</a>
+          ))}
+        </span>
       </nav>
     </header>
     <main>
       {
         switchTo && leagues.length > 1 && (
-          <nav class="league-tabs" aria-label="Competição">
+          <nav class="league-tabs" aria-label={T.competition}>
             {switchTo === "scorigamis" && (
-              <a href={href("scorigamis")} aria-current={geral ? "page" : undefined}>Geral</a>
+              <a href={h("scorigamis")} aria-current={geral ? "page" : undefined}>{T.general}</a>
             )}
             {leagues.map((l) => (
-              <a href={href(`${l.slug}/${switchTo}`)} aria-current={!geral && l.slug === liga ? "page" : undefined}>{l.short}</a>
+              <a href={h(`${l.slug}/${switchTo}`)} aria-current={!geral && l.slug === liga ? "page" : undefined}>{l.short}</a>
             ))}
           </nav>
         )
@@ -78,8 +96,8 @@ const base = previewBase(Astro.url.pathname);
       <slot />
     </main>
     <footer class="site">
-      <p>Novas scorigamis no X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a></p>
-      <p><a href={href("sobre")}>Sobre, regras e fontes dos dados</a> · <a href={href("ajuste")} id="report-link">Solicitar ajuste</a></p>
+      <p>{T.footerX} <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a></p>
+      <p><a href={h("sobre")}>{T.footerAbout}</a> · <a href={h("ajuste")} id="report-link">{T.footerReport}</a></p>
     </footer>
     <script>
       import { initTooltip } from "../scripts/tooltip";
@@ -91,6 +109,12 @@ const base = previewBase(Astro.url.pathname);
         u.searchParams.set("pagina", location.pathname.split("/").slice(-2).join("/") + location.search);
         report.href = u.toString();
       }
+      // Os links de idioma levam os filtros e a página atual (?liga=...) junto.
+      document.querySelectorAll<HTMLAnchorElement>("[data-lang-link]").forEach((a) => {
+        a.addEventListener("click", () => {
+          if (location.search) a.href = a.href.split("?")[0] + location.search;
+        });
+      });
       // Modo escuro: alterna entre claro e escuro e guarda a escolha neste navegador.
       document.getElementById("theme-toggle")?.addEventListener("click", () => {
         const root = document.documentElement;

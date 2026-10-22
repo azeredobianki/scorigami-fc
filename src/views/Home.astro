@@ -1,0 +1,165 @@
+---
+import Base from "../layouts/Base.astro";
+import { buildCells, scorigamis } from "../lib/core";
+import { serverCtx } from "../lib/ctx";
+import { clubs, lastDate, leagues, matches } from "../lib/data";
+import { eras } from "../lib/eras";
+import { href } from "../lib/links";
+import { gridHtml, highlightsHtml, legendHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang } = Astro.props as { lang: Lang };
+const T = t(lang);
+const h = (path: string) => href(path, lang);
+const ctx = serverCtx("todas", lang);
+const since = { pt: "desde", en: "since", es: "desde" }[lang];
+const europe = T.join(leagues.filter((l) => l.slug !== "brasileirao" && l.slug !== "mls").map((l) => (l.slug === "premier-league" ? `${l.short} (${since} ${l.since})` : l.short)));
+const cells = buildCells(matches, "norm");
+const recent = scorigamis(matches, "norm", true).slice(-5).reverse();
+const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
+const eraList = eras(seasons, "", lang);
+// Times agrupados por liga no filtro.
+const clubGroups = leagues.map((l) => {
+  const playing = new Set(matches.filter((m) => m.league === l.slug).flatMap((m) => [m.home, m.away]));
+  return { league: l, clubs: clubs.filter((c) => playing.has(c.slug)).sort((a, b) => a.name.localeCompare(b.name, T.locale)) };
+});
+---
+
+<Base lang={lang} title="Scorigami FC" description={T.homeDesc} active="grafico">
+  <form class="filters" id="filters" onsubmit="return false" aria-label={T.filtersLabel}>
+    <div class="field">
+      <span class="field-label" id="lbl-liga">{T.fCompetitions}</span>
+      <details class="multi" data-name="liga">
+        <summary aria-labelledby="lbl-liga"><span class="sum">{T.allGeneral}</span></summary>
+        <div class="menu">
+          {leagues.map((l) => <label><input type="checkbox" name="liga" value={l.slug} /> {l.short}</label>)}
+          <button type="button" class="clear">{T.clear}</button>
+        </div>
+      </details>
+    </div>
+    <div class="field">
+      <span class="field-label" id="lbl-time">{T.fTeams}</span>
+      <details class="multi" data-name="time">
+        <summary aria-labelledby="lbl-time"><span class="sum">{T.allTeamsSum}</span></summary>
+        <div class="menu wide">
+          <input type="search" class="find" placeholder={T.searchTeam} aria-label={T.searchTeam} />
+          {clubGroups.map((g) => (
+            <fieldset data-league={g.league.slug}>
+              <legend>{g.league.short}</legend>
+              {g.clubs.map((c) => <label><input type="checkbox" name="time" value={c.slug} /> {c.name}</label>)}
+            </fieldset>
+          ))}
+          <button type="button" class="clear">{T.clear}</button>
+        </div>
+      </details>
+    </div>
+    <div class="field">
+      <span class="field-label" id="lbl-era">{T.fEras}</span>
+      <details class="multi" data-name="era">
+        <summary aria-labelledby="lbl-era"><span class="sum">{T.allErasSum}</span></summary>
+        <div class="menu" id="era-menu">
+          {eraList.slice(1).map((e) => <label><input type="checkbox" name="era" value={e.id} /> {e.label}</label>)}
+          <button type="button" class="clear">{T.clear}</button>
+        </div>
+      </details>
+    </div>
+    <div class="field">
+      <span class="field-label">{T.fChart}</span>
+      <div class="switch" role="group" aria-label={T.fChartLabel}>
+        <button type="button" data-mode="norm" aria-pressed="true">{T.modeNorm}</button>
+        <button type="button" data-mode="mando" aria-pressed="false">{T.modeMando}</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">{T.fColor}</span>
+      <div class="switch" role="group" aria-label={T.fColor}>
+        <button type="button" data-color="freq" aria-pressed="true">{T.colorFreq}</button>
+        <button type="button" data-color="first" aria-pressed="false">{T.colorFirst}</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="status">
+    <span id="counter" set:html={T.showing(matches.length, matches.length)} />
+    <span>{T.lastGame(T.long(lastDate))}</span>
+  </div>
+
+  <div id="grid" set:html={gridHtml(ctx, matches, { mode: "norm" })} />
+  <div id="legend" set:html={legendHtml(ctx)} />
+
+  <h2>{T.whatIs}</h2>
+  {lang === "pt" && (
+    <p>
+      Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e das
+      principais ligas europeias ({europe}), além da MLS desde 1996. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes: no filtro Geral, em nenhuma das competições; com uma
+      liga escolhida, naquela liga. O site acompanha cada placar
+      novo e quantas vezes cada um já se repetiu. A ideia vem do <a href="https://nflscorigami.com/">NFL Scorigami</a>, criado
+      por Jon Bois.
+    </p>
+  )}
+  {lang === "en" && (
+    <p>
+      This chart shows every final score in the history of Brazil's Brasileirão, going back to the 1959 Taça Brasil, and of
+      the top European leagues ({europe}), plus MLS since 1996. It also shows every score that has never happened. Pick a
+      competition in the filter to see just that one. A <b>scorigami</b> is a score that had never happened before: with
+      all competitions selected, in none of them; with one league selected, in that league. The site tracks every new score
+      and how many times each one has been repeated. The idea comes from <a href="https://nflscorigami.com/">NFL Scorigami</a>,
+      created by Jon Bois.
+    </p>
+  )}
+  {lang === "es" && (
+    <p>
+      Este gráfico muestra todos los marcadores finales de la historia del Brasileirão, desde la Taça Brasil de 1959, y de
+      las principales ligas europeas ({europe}), además de la MLS desde 1996. También muestra todos los marcadores que
+      nunca ocurrieron. Elige una competición en el filtro para ver solo esa. Una <b>scorigami</b> es un marcador que nunca
+      había ocurrido antes: con el filtro General, en ninguna de las competiciones; con una liga elegida, en esa liga. El
+      sitio sigue cada marcador nuevo y cuántas veces se repitió cada uno. La idea viene de
+      <a href="https://nflscorigami.com/">NFL Scorigami</a>, creado por Jon Bois.
+    </p>
+  )}
+
+  <h2>{T.howToRead}</h2>
+  {lang === "pt" && (
+    <p>
+      O placar do vencedor fica no eixo vertical, à esquerda, e o do perdedor no eixo horizontal, embaixo. Empates ficam na
+      diagonal. Na cor "Frequência", quanto mais escura a casa, mais vezes o placar aconteceu; na cor "Primeira vez",
+      quanto mais escura, mais recente foi a primeira vez daquele placar. As casas em branco são placares que nunca aconteceram. A
+      metade de cima à direita fica vazia porque o perdedor não pode ter feito mais gols que o vencedor. No modo
+      mandante × visitante, 3–1 e 1–3 viram casas diferentes. Passe o mouse para ver os números e clique numa casa para ver
+      os jogos.
+    </p>
+  )}
+  {lang === "en" && (
+    <p>
+      The winner's score is on the vertical axis, on the left, and the loser's on the horizontal axis, at the bottom. Draws
+      sit on the diagonal. With the "Frequency" color, the darker the square, the more often that score has happened; with
+      "First time", the darker the square, the more recently that score happened for the first time. Blank squares are
+      scores that have never happened. The top-right half is empty because the loser can't score more than the winner. In
+      home × away mode, 3–1 and 1–3 become different squares. Hover to see the numbers and click a square to see the games.
+    </p>
+  )}
+  {lang === "es" && (
+    <p>
+      Los goles del ganador están en el eje vertical, a la izquierda, y los del perdedor en el eje horizontal, abajo. Los
+      empates quedan en la diagonal. Con el color "Frecuencia", cuanto más oscura la casilla, más veces ocurrió el marcador;
+      con "Primera vez", cuanto más oscura, más reciente fue la primera vez de ese marcador. Las casillas en blanco son
+      marcadores que nunca ocurrieron. La mitad superior derecha queda vacía porque el perdedor no puede marcar más goles que
+      el ganador. En el modo local × visitante, 3–1 y 1–3 son casillas distintas. Pasa el ratón para ver los números y haz
+      clic en una casilla para ver los partidos.
+    </p>
+  )}
+
+  <h2 id="recent-title">{T.recentTitle(null, [])}</h2>
+  <div id="recent" set:html={scorigamiListHtml(ctx, recent)} />
+  <a class="more" id="all-scorigamis" href={h("scorigamis")}>{T.allScorigamisLink}</a>
+
+  <h2>{T.highlights}</h2>
+  <div id="highlights" set:html={highlightsHtml(ctx, matches)} />
+
+  <h2>{T.topScores}</h2>
+  <div id="top" set:html={topScoresHtml(ctx, cells)} />
+  <script>
+    import { initHome } from "../scripts/home";
+    initHome();
+  </script>
+</Base>

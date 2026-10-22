@@ -1,32 +1,8 @@
 ---
-import Base from "../../../layouts/Base.astro";
-import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues } from "../../../lib/data";
-import { PREVIEW } from "../../../lib/links";
-import { seasonPage } from "../../../lib/pages";
-
-export function getStaticPaths() {
-  if (PREVIEW) return [];
-  return leagues.flatMap((l) =>
-    [...new Set(leagueMatches(l.slug).map((m) => m.season))].map((s) => ({ params: { liga: l.slug, ano: String(s) } })),
-  );
-}
-
-const { liga, ano } = Astro.params as { liga: string; ano: string };
-const season = Number(ano);
-const all = leagueMatches(liga);
-// Fases do Brasileirão antigo (Taça Brasil, Robertão) quando a temporada teve mais de uma competição.
-const stages = [
-  ...new Set(
-    all
-      .filter((m) => m.season === season)
-      .map((m) => m.stage?.split(" - ")[0])
-      .filter((s): s is string => !!s && /Taça|Robertão/.test(s)),
-  ),
-];
-const page = seasonPage(serverCtx(liga), league(liga), all, season, stages);
+// Página em pt (cada idioma tem uma cópia desta rota). O conteúdo fica em src/views/Season.astro.
+import View from "../../../views/Season.astro";
+import { paths } from "../../../lib/paths";
+export const getStaticPaths = paths.season;
 ---
 
-<Base title={page.title} description={page.description} active="scorigamis" liga={liga}>
-  <Fragment set:html={page.html} />
-</Base>
+<View lang="pt" {...Astro.params} />

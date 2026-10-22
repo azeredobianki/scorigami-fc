@@ -1,0 +1,8 @@
+---
+// Página em en (cada idioma tem uma cópia desta rota). O conteúdo fica em src/views/Detail.astro.
+import View from "../../views/Detail.astro";
+import { paths } from "../../lib/paths";
+export const getStaticPaths = paths.detail;
+---
+
+<View lang="en" {...Astro.params} />

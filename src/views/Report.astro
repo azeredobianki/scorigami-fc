@@ -1,0 +1,53 @@
+---
+// Formulário para o visitante apontar um erro nos dados.
+import Base from "../layouts/Base.astro";
+import { leagues } from "../lib/data";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang } = Astro.props as { lang: Lang };
+const T = t(lang);
+---
+
+<Base lang={lang} title={T.reportTitle} description={T.reportDesc} active="sobre">
+  <div class="prose">
+    <h1>{T.reportTitle}</h1>
+    <p>{T.reportIntro}</p>
+  </div>
+
+  <form class="report" id="report">
+    <label>
+      <span>{T.rWhat}</span>
+      <select name="tipo" required>
+        {Object.entries(T.rTypes).map(([value, label]) => <option value={value}>{label}</option>)}
+      </select>
+    </label>
+    <label>
+      <span>{T.rLeague}</span>
+      <select name="liga">
+        <option value="">{T.rLeagueAny}</option>
+        {leagues.map((l) => <option value={l.slug}>{l.short}</option>)}
+      </select>
+    </label>
+    <label>
+      <span>{T.rGame} <small>{T.rOptional}</small></span>
+      <input name="jogo" maxlength="200" placeholder={T.rGamePh} />
+    </label>
+    <label>
+      <span>{T.rDesc}</span>
+      <textarea name="descricao" required minlength="10" maxlength="2000" rows="5" placeholder={T.rDescPh}></textarea>
+    </label>
+    <label>
+      <span>{T.rContact} <small>{T.rContactNote}</small></span>
+      <input name="contato" maxlength="200" placeholder={T.rContactPh} />
+    </label>
+    <input type="hidden" name="pagina" />
+    <input type="hidden" name="idioma" value={lang} />
+    <button type="submit">{T.rSend}</button>
+    <p class="report-status" id="report-status" role="status" aria-live="polite"></p>
+  </form>
+
+  <script>
+    import { initReport } from "../scripts/report";
+    initReport();
+  </script>
+</Base>

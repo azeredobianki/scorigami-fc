@@ -1,0 +1,8 @@
+---
+// Página em en (cada idioma tem uma cópia desta rota). O conteúdo fica em src/views/LeagueScorigamis.astro.
+import View from "../../../../views/LeagueScorigamis.astro";
+import { paths } from "../../../../lib/paths";
+export const getStaticPaths = paths.leagueScorigamis;
+---
+
+<View lang="en" {...Astro.params} />

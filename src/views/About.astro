@@ -1,0 +1,209 @@
+---
+import Base from "../layouts/Base.astro";
+import { leagues, matches } from "../lib/data";
+import { href } from "../lib/links";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang } = Astro.props as { lang: Lang };
+const T = t(lang);
+
+const from = matches.reduce((x, m) => Math.min(x, m.season), Infinity);
+const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
+---
+
+<Base lang={lang} title={T.aboutTitle} description={T.aboutDesc} active="sobre">
+  {lang === "pt" && (
+  <div class="prose">
+    <h1>Sobre o Scorigami FC</h1>
+    <p>
+      Scorigami é um placar final que nunca tinha acontecido antes na história de uma competição. O conceito foi criado por
+      Jon Bois para a NFL e ganhou versões para outros esportes, como o <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
+      O Scorigami FC leva a ideia para o futebol, com o Brasileirão, as principais ligas europeias e a MLS.
+    </p>
+
+    <h2>O que conta como placar final</h2>
+    <ul>
+      <li>Vale o placar de campo ao fim do jogo, incluindo a prorrogação quando houve.</li>
+      <li>Disputas de pênaltis não mudam o placar. Elas aparecem só como observação no jogo.</li>
+      <li>Jogos de mata-mata e finais entram normalmente.</li>
+      <li>W.O. e resultados alterados no tribunal ficam marcados. O placar que vale é o de campo, com nota.</li>
+      <li>Só entram jogos com data e placar confiáveis.</li>
+      <li>
+        Uma scorigami é medida dentro de cada liga: um placar inédito no Brasileirão é scorigami mesmo que já tenha acontecido em
+        outra competição.
+      </li>
+    </ul>
+
+    <h2>O que entra no Brasileirão</h2>
+    <p>
+      O histórico considera todas as edições reconhecidas pela CBF como Campeonato Brasileiro: a Taça Brasil (1959–1968), o
+      Torneio Roberto Gomes Pedrosa (1967–1970) e o Campeonato Brasileiro a partir de 1971.
+    </p>
+
+    <h2>O que entra nas ligas europeias</h2>
+    <p>
+      Cada liga é a primeira divisão nacional desde a sua primeira temporada com datas confiáveis, com os nomes antigos
+      contados como a mesma liga: a First Division inglesa (1888/89–1991/92) junto da Premier League, e a Division 1
+      francesa (até 2001/02) junto da Ligue 1. La Liga começa em 1928/29, a Serie A em 1929/30 (incluindo a Divisione
+      Nazionale de 1945/46), a Bundesliga em 1963/64, a Eredivisie em 1956/57 e a Ligue 1 em 1938/39, porque as
+      temporadas francesas de 1932 a 1937 não têm datas dos jogos em nenhuma fonte. A Primeira Liga começa em 1994/95: antes
+      disso, as fontes só trazem os placares, sem as datas. As temporadas europeias aparecem como "2024/25" e, nos endereços do
+      site, pelo ano de início.
+    </p>
+
+    <h2>O que entra na MLS</h2>
+    <p>
+      Todas as temporadas desde 1996, com os playoffs. A temporada segue o ano civil. Nos playoffs, vale o placar com a
+      prorrogação e os pênaltis aparecem só como observação. De 1996 a 1999, empates da temporada regular eram decididos
+      nos pênaltis; aqui vale o empate de campo.
+    </p>
+
+    <h2 id="fontes">Fontes</h2>
+    <p>A base atual tem {T.N(matches.length)} jogos de {from} a {to}, em {leagues.length === 1 ? "uma liga" : `${leagues.length} ligas`}.</p>
+    <ul>
+      <li><a href="https://github.com/adaoduque/Brasileirao_Dataset">Brasileirao_Dataset</a>, de Adão Duque: Série A de 2003 a 2024.</li>
+      <li><a href="https://github.com/openfootball/football.json">openfootball/football.json</a>: Série A de 2025 e 2026 (domínio público).</li>
+      <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão e Brasileirão de 1959 a 2002, conferidos com o <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> de 1971 a 2002.</li>
+      <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, de James Curley: as ligas europeias e a MLS até 2024/25, conferidas jogo a jogo com <a href="https://github.com/footballcsv">footballcsv</a>, openfootball e <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, e com as tabelas finais do <a href="https://www.rsssf.org/">RSSSF</a>.</li>
+      <li>openfootball/football.json: ligas europeias e MLS a partir de 2025/26.</li>
+    </ul>
+    <p>
+      O total de jogos de cada temporada é conferido antes de publicar. No Brasileirão, ficaram de fora 44 jogos antigos sem
+      data ou sem placar de campo (W.O. e jogos abandonados), e em 371 jogos antigos o dia exato é aproximado dentro da rodada.
+    </p>
+
+    <h2>Contato</h2>
+    <p>Achou um placar errado? Use o formulário <a href={href("ajuste")}>Solicitar ajuste</a> ou fale com a gente no X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a>.</p>
+  </div>
+  )}
+  {lang === "en" && (
+  <div class="prose">
+    <h1>About Scorigami FC</h1>
+    <p>
+      A scorigami is a final score that had never happened before in the history of a competition. The idea was created by
+      Jon Bois for the NFL and has spread to other sports, like <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
+      Scorigami FC brings it to football, with Brazil's Brasileirão, the top European leagues and MLS.
+    </p>
+
+    <h2>What counts as a final score</h2>
+    <ul>
+      <li>The score on the pitch at the end of the game counts, including extra time when there was any.</li>
+      <li>Penalty shootouts don't change the score. They only appear as a note on the game.</li>
+      <li>Knockout games and finals count like any other game.</li>
+      <li>Walkovers and results changed by a tribunal are marked. The score that counts is the one on the pitch, with a note.</li>
+      <li>Only games with a reliable date and score are included.</li>
+      <li>
+        A scorigami is measured within each league: a score never seen before in the Brasileirão is a scorigami even if it has
+        happened in another competition.
+      </li>
+    </ul>
+
+    <h2>What the Brasileirão includes</h2>
+    <p>
+      The history covers every edition the Brazilian Football Confederation (CBF) recognizes as the Brazilian championship:
+      the Taça Brasil (1959–1968), the Torneio Roberto Gomes Pedrosa (1967–1970) and the Campeonato Brasileiro from 1971.
+    </p>
+
+    <h2>What the European leagues include</h2>
+    <p>
+      Each league is the national top flight from its first season with reliable dates, with old names counted as the same
+      league: the English First Division (1888/89–1991/92) together with the Premier League, and the French Division 1
+      (until 2001/02) together with Ligue 1. La Liga starts in 1928/29, Serie A in 1929/30 (including the 1945/46 Divisione
+      Nazionale), the Bundesliga in 1963/64, the Eredivisie in 1956/57 and Ligue 1 in 1938/39, because the French seasons
+      from 1932 to 1937 have no match dates in any source. The Primeira Liga starts in 1994/95: before that, the sources
+      only have the scores, without dates. European seasons appear as "2024/25" and, in the site's addresses, by their
+      starting year.
+    </p>
+
+    <h2>What MLS includes</h2>
+    <p>
+      Every season since 1996, including the playoffs. The season follows the calendar year. In the playoffs, the score
+      after extra time counts and penalties only appear as a note. From 1996 to 1999, regular-season draws were decided by
+      shootouts; here the draw on the pitch counts.
+    </p>
+
+    <h2 id="fontes">Sources</h2>
+    <p>The database currently has {T.N(matches.length)} games from {from} to {to}, in {leagues.length === 1 ? "one league" : `${leagues.length} leagues`}.</p>
+    <ul>
+      <li><a href="https://github.com/adaoduque/Brasileirao_Dataset">Brasileirao_Dataset</a>, by Adão Duque: Série A from 2003 to 2024.</li>
+      <li><a href="https://github.com/openfootball/football.json">openfootball/football.json</a>: Série A in 2025 and 2026 (public domain).</li>
+      <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão and Brasileirão from 1959 to 2002, checked against the <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> from 1971 to 2002.</li>
+      <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, by James Curley: the European leagues and MLS up to 2024/25, checked game by game against <a href="https://github.com/footballcsv">footballcsv</a>, openfootball and <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, and against the final tables at <a href="https://www.rsssf.org/">RSSSF</a>.</li>
+      <li>openfootball/football.json: European leagues and MLS from 2025/26.</li>
+    </ul>
+    <p>
+      The number of games in each season is checked before publishing. In the Brasileirão, 44 old games without a date or
+      without a score on the pitch (walkovers and abandoned games) were left out, and in 371 old games the exact day is
+      approximate within the matchday.
+    </p>
+
+    <h2>Contact</h2>
+    <p>Found a wrong score? Use the <a href={href("ajuste", lang)}>Report an error</a> form or reach us on X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a>.</p>
+  </div>
+  )}
+  {lang === "es" && (
+  <div class="prose">
+    <h1>Acerca de Scorigami FC</h1>
+    <p>
+      Una scorigami es un marcador final que nunca había ocurrido antes en la historia de una competición. El concepto lo
+      creó Jon Bois para la NFL y ganó versiones en otros deportes, como <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
+      Scorigami FC lleva la idea al fútbol, con el Brasileirão, las principales ligas europeas y la MLS.
+    </p>
+
+    <h2>Qué cuenta como marcador final</h2>
+    <ul>
+      <li>Vale el marcador del campo al final del partido, incluida la prórroga cuando la hubo.</li>
+      <li>Las tandas de penales no cambian el marcador. Solo aparecen como nota en el partido.</li>
+      <li>Los partidos de eliminación directa y las finales cuentan normalmente.</li>
+      <li>Los partidos ganados por incomparecencia o con resultado cambiado en los tribunales están marcados. Vale el marcador del campo, con una nota.</li>
+      <li>Solo entran partidos con fecha y marcador confiables.</li>
+      <li>
+        Una scorigami se mide dentro de cada liga: un marcador inédito en el Brasileirão es scorigami aunque ya haya ocurrido
+        en otra competición.
+      </li>
+    </ul>
+
+    <h2>Qué incluye el Brasileirão</h2>
+    <p>
+      La historia considera todas las ediciones que la Confederación Brasileña de Fútbol (CBF) reconoce como Campeonato
+      Brasileño: la Taça Brasil (1959–1968), el Torneio Roberto Gomes Pedrosa (1967–1970) y el Campeonato Brasileiro desde 1971.
+    </p>
+
+    <h2>Qué incluyen las ligas europeas</h2>
+    <p>
+      Cada liga es la primera división nacional desde su primera temporada con fechas confiables, con los nombres antiguos
+      contados como la misma liga: la First Division inglesa (1888/89–1991/92) junto con la Premier League, y la Division 1
+      francesa (hasta 2001/02) junto con la Ligue 1. La Liga empieza en 1928/29, la Serie A en 1929/30 (incluida la
+      Divisione Nazionale de 1945/46), la Bundesliga en 1963/64, la Eredivisie en 1956/57 y la Ligue 1 en 1938/39, porque
+      las temporadas francesas de 1932 a 1937 no tienen fechas de los partidos en ninguna fuente. La Primeira Liga empieza en
+      1994/95: antes, las fuentes solo tienen los marcadores, sin las fechas. Las temporadas europeas aparecen como "2024/25"
+      y, en las direcciones del sitio, por el año de inicio.
+    </p>
+
+    <h2>Qué incluye la MLS</h2>
+    <p>
+      Todas las temporadas desde 1996, con los playoffs. La temporada sigue el año calendario. En los playoffs vale el
+      marcador con la prórroga, y los penales solo aparecen como nota. De 1996 a 1999, los empates de la temporada regular se
+      decidían por penales; aquí vale el empate del campo.
+    </p>
+
+    <h2 id="fontes">Fuentes</h2>
+    <p>La base actual tiene {T.N(matches.length)} partidos de {from} a {to}, en {leagues.length === 1 ? "una liga" : `${leagues.length} ligas`}.</p>
+    <ul>
+      <li><a href="https://github.com/adaoduque/Brasileirao_Dataset">Brasileirao_Dataset</a>, de Adão Duque: Série A de 2003 a 2024.</li>
+      <li><a href="https://github.com/openfootball/football.json">openfootball/football.json</a>: Série A de 2025 y 2026 (dominio público).</li>
+      <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão y Brasileirão de 1959 a 2002, cotejados con el <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> de 1971 a 2002.</li>
+      <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, de James Curley: las ligas europeas y la MLS hasta 2024/25, cotejadas partido a partido con <a href="https://github.com/footballcsv">footballcsv</a>, openfootball y <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, y con las tablas finales de <a href="https://www.rsssf.org/">RSSSF</a>.</li>
+      <li>openfootball/football.json: ligas europeas y MLS desde 2025/26.</li>
+    </ul>
+    <p>
+      El total de partidos de cada temporada se revisa antes de publicar. En el Brasileirão quedaron fuera 44 partidos antiguos
+      sin fecha o sin marcador de campo (incomparecencias y partidos suspendidos), y en 371 partidos antiguos el día exacto es
+      aproximado dentro de la jornada.
+    </p>
+
+    <h2>Contacto</h2>
+    <p>¿Encontraste un marcador equivocado? Usa el formulario <a href={href("ajuste", lang)}>Reportar un error</a> o escríbenos en X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a>.</p>
+  </div>
+  )}
+</Base>

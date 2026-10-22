@@ -1,0 +1,199 @@
+---
+import Base from "../layouts/Base.astro";
+import { biggestRouts, gridSize, hi, lo, scorigamis } from "../lib/core";
+import { serverCtx } from "../lib/ctx";
+import { clubName, leagueMatches, leagues, seasonOf } from "../lib/data";
+import { href } from "../lib/links";
+import { gridHtml } from "../lib/render";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang } = Astro.props as { lang: Lang };
+const T = t(lang);
+
+interface Milestone {
+  league: string;
+  season: number;
+  title: string;
+  text: string;
+}
+
+type Text = [title: string, text: string];
+// Marcos: os fixos são escritos à mão, os outros saem dos dados.
+const FIXED: { league: string; season: number; pt: Text; en: Text; es: Text }[] = [
+  {
+    league: "brasileirao", season: 1967,
+    pt: ["Chega o Robertão", "O Torneio Roberto Gomes Pedrosa amplia o campeonato para clubes de vários estados."],
+    en: ["The Robertão arrives", "The Torneio Roberto Gomes Pedrosa opens the championship to clubs from several states."],
+    es: ["Llega el Robertão", "El Torneio Roberto Gomes Pedrosa amplía el campeonato a clubes de varios estados."],
+  },
+  {
+    league: "brasileirao", season: 1971,
+    pt: ["Primeiro Campeonato Nacional", "Nasce o Campeonato Brasileiro com esse nome, com 20 clubes."],
+    en: ["First national championship", "The Campeonato Brasileiro is born under that name, with 20 clubs."],
+    es: ["Primer Campeonato Nacional", "Nace el Campeonato Brasileiro con ese nombre, con 20 clubes."],
+  },
+  {
+    league: "brasileirao", season: 2003,
+    pt: ["Pontos corridos", "O Brasileirão passa a ser disputado em turno e returno, sem mata-mata."],
+    en: ["Round-robin format", "The Brasileirão becomes a double round-robin league, with no knockout stage."],
+    es: ["Liga regular", "El Brasileirão pasa a jugarse a ida y vuelta, sin eliminatorias."],
+  },
+  {
+    league: "premier-league", season: 1992,
+    pt: ["Nasce a Premier League", "Os clubes da First Division criam a Premier League. Para o site, é a mesma primeira divisão, e a contagem continua."],
+    en: ["The Premier League is born", "The First Division clubs form the Premier League. For this site it's the same top flight, and the count carries on."],
+    es: ["Nace la Premier League", "Los clubes de la First Division crean la Premier League. Para el sitio es la misma primera división, y la cuenta sigue."],
+  },
+  {
+    league: "premier-league", season: 1919,
+    pt: ["A volta depois da guerra", "A First Division retorna após a Primeira Guerra Mundial, agora com 22 clubes."],
+    en: ["Back after the war", "The First Division returns after the First World War, now with 22 clubs."],
+    es: ["La vuelta tras la guerra", "La First Division regresa tras la Primera Guerra Mundial, ahora con 22 clubes."],
+  },
+  {
+    league: "la-liga", season: 1939,
+    pt: ["A volta depois da Guerra Civil", "O campeonato espanhol retorna após três temporadas parado."],
+    en: ["Back after the Civil War", "The Spanish league returns after three seasons without football."],
+    es: ["La vuelta tras la Guerra Civil", "El campeonato español regresa tras tres temporadas parado."],
+  },
+  {
+    league: "serie-a", season: 1945,
+    pt: ["Divisione Nazionale", "No pós-guerra, o campeonato é disputado em grupos Norte e Centro-Sul, com uma fase final."],
+    en: ["Divisione Nazionale", "After the war, the league is played in North and Centre-South groups, with a final round."],
+    es: ["Divisione Nazionale", "En la posguerra, el campeonato se juega en grupos Norte y Centro-Sur, con una fase final."],
+  },
+  {
+    league: "serie-a", season: 1946,
+    pt: ["A Serie A volta ao grupo único", "O campeonato italiano retoma o formato de pontos corridos."],
+    en: ["Serie A returns to a single table", "The Italian league goes back to a round-robin format."],
+    es: ["La Serie A vuelve al grupo único", "El campeonato italiano retoma el formato de liga regular."],
+  },
+  {
+    league: "ligue-1", season: 1945,
+    pt: ["A volta depois da guerra", "O campeonato francês retorna após a Segunda Guerra Mundial."],
+    en: ["Back after the war", "The French league returns after the Second World War."],
+    es: ["La vuelta tras la guerra", "El campeonato francés regresa tras la Segunda Guerra Mundial."],
+  },
+  {
+    league: "ligue-1", season: 2002,
+    pt: ["Nasce a Ligue 1", "A Division 1 muda de nome. Para o site, é a mesma primeira divisão."],
+    en: ["Ligue 1 is born", "Division 1 changes its name. For this site it's the same top flight."],
+    es: ["Nace la Ligue 1", "La Division 1 cambia de nombre. Para el sitio es la misma primera división."],
+  },
+  {
+    league: "mls", season: 2000,
+    pt: ["Fim do desempate nos pênaltis", "A MLS deixa de decidir empates da temporada regular nos pênaltis."],
+    en: ["No more shootout tiebreakers", "MLS stops deciding regular-season draws with penalty shootouts."],
+    es: ["Fin del desempate por penales", "La MLS deja de definir los empates de la temporada regular por penales."],
+  },
+  {
+    league: "premier-league", season: 1946,
+    pt: ["A volta depois da Segunda Guerra", "O campeonato retorna após sete temporadas parado."],
+    en: ["Back after the Second World War", "The league returns after seven seasons without football."],
+    es: ["La vuelta tras la Segunda Guerra", "El campeonato regresa tras siete temporadas parado."],
+  },
+];
+
+const milestones: Milestone[] = [];
+for (const l of leagues) {
+  const all = leagueMatches(l.slug);
+  if (!all.length) continue;
+  const first = all[0];
+  const name = (slug: string, season: number) => clubName(slug, season);
+  milestones.push({
+    league: l.slug,
+    season: first.season,
+    title: T.msFirstGame,
+    text: T.msFirstGameText(`${name(first.home, first.season)} ${first.hg}, ${name(first.away, first.season)} ${first.ag}`, T.long(first.date)),
+  });
+  const rout = biggestRouts(all, 1)[0];
+  milestones.push({
+    league: l.slug,
+    season: rout.season,
+    title: `${name(rout.home, rout.season)} ${rout.hg}, ${name(rout.away, rout.season)} ${rout.ag}`,
+    text: T.msRoutText(l, T.long(rout.date)),
+  });
+  const last = scorigamis(all).at(-1)!;
+  milestones.push({
+    league: l.slug,
+    season: last.season,
+    title: T.msLast(`${hi(last)}–${lo(last)}`),
+    text: T.msLastText(`${name(last.home, last.season)} ${last.hg}, ${name(last.away, last.season)} ${last.ag}`, T.long(last.date)),
+  });
+}
+milestones.push(
+  ...FIXED.filter((f) => leagues.some((l) => l.slug === f.league)).map((f) => ({ league: f.league, season: f.season, title: f[lang][0], text: f[lang][1] })),
+);
+milestones.sort((a, b) => a.season - b.season);
+
+const first = leagues[0].slug;
+const seasons = [...new Set(leagueMatches(first).map((m) => m.season))].sort((a, b) => a - b);
+const S = (s: number) => seasonOf(first, s);
+const ctx = serverCtx(first, lang);
+---
+
+<Base
+  lang={lang}
+  title="Time-lapse"
+  description={T.tlDesc}
+  active="timelapse"
+>
+  <h1>{T.tlH1}</h1>
+  <p>{T.tlIntro} <a href={href("", lang)}>{T.tlIntroLink}</a></p>
+
+  <form class="filters" id="tl-filters" onsubmit="return false">
+    {
+      leagues.length > 1 && (
+        <div class="field">
+          <span class="field-label" id="tl-lbl-liga">{T.competition}</span>
+          <select name="liga" aria-labelledby="tl-lbl-liga">
+            {leagues.map((l) => <option value={l.slug} selected={l.slug === first}>{l.short}</option>)}
+            <option value="">{T.tlAll}</option>
+          </select>
+        </div>
+      )
+    }
+    <div class="field">
+      <span class="field-label">{T.fChart}</span>
+      <div class="switch" role="group" aria-label={T.fChartLabel}>
+        <button type="button" data-mode="norm" aria-pressed="true">{T.modeNorm}</button>
+        <button type="button" data-mode="mando" aria-pressed="false">{T.modeMando}</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="tl-head">
+    <span class="tl-year" id="tl-year">{S(seasons[seasons.length - 1])}</span>
+    <span class="tl-count"><b id="tl-count">–</b> {T.tlUnique}</span>
+  </div>
+  <p class="tl-note" id="tl-note" aria-live="polite"></p>
+
+  <div id="tl-grid" set:html={gridHtml(ctx, [], { mode: "norm", size: gridSize(leagueMatches(first)) })} />
+
+  <div class="player">
+    <button type="button" id="tl-play" aria-label={T.tlPlay}>▶</button>
+    <input type="range" id="tl-range" min="0" max={seasons.length - 1} value={seasons.length - 1} aria-label={T.tlSeason} />
+  </div>
+  <div class="range-ends"><span class="tl-first">{S(seasons[0])}</span><span class="tl-last">{S(seasons[seasons.length - 1])}</span></div>
+
+  <div class="year-legend" aria-hidden="true">
+    <span>{T.tlFirst}</span><span class="tl-first">{S(seasons[0])}</span><span class="ramp" id="tl-ramp"></span><span class="tl-last">{S(seasons[seasons.length - 1])}</span>
+    <span class="new"></span><span>{T.tlNew}</span>
+  </div>
+
+  <h2>{T.tlMilestones}</h2>
+  <ol class="milestones">
+    {milestones.map((m) => (
+      <li data-league={m.league} hidden={m.league !== first}>
+        <button type="button" data-season={m.season} data-league={m.league}>{seasonOf(m.league, m.season)}</button>
+        <div><h3>{m.title}</h3><p>{m.text}</p></div>
+      </li>
+    ))}
+  </ol>
+
+  <script type="application/json" id="tl-milestones" set:html={JSON.stringify(milestones)} />
+  <script>
+    import { initTimelapse } from "../scripts/timelapse";
+    initTimelapse();
+  </script>
+</Base>

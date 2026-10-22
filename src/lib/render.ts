@@ -16,6 +16,7 @@ import {
   type Match,
   type Mode,
 } from "./core";
+import type { Dict, Lang } from "./i18n";
 import { clubPageHref, scorePageHref } from "./links";
 
 export interface Ctx {
@@ -26,36 +27,23 @@ export interface Ctx {
   today: string;
   /** Rótulo da temporada: "2019" no Brasil, "2019/20" nas ligas europeias. */
   season: (league: string, season: number) => string;
+  lang: Lang;
+  t: Dict;
 }
 
 export const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-
-/** "05/05/2019" */
-export function fmtDate(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
-
+/** "05/05/2019" ("05/22/2019" em inglês). */
+export const fmtDate = (ctx: Ctx, iso: string) => ctx.t.short(iso);
 /** "5 de maio de 2019" */
-export function fmtLong(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return `${d} de ${MONTHS[m - 1]} de ${y}`;
-}
-
-export const fmtInt = (n: number) => n.toLocaleString("pt-BR");
-
-export function plural(n: number, one: string, many: string): string {
-  return `${fmtInt(n)} ${n === 1 ? one : many}`;
-}
-
-export const times = (n: number) => (n ? plural(n, "vez", "vezes") : "Nunca");
+export const fmtLong = (ctx: Ctx, iso: string) => ctx.t.long(iso);
+export const fmtInt = (ctx: Ctx, n: number) => ctx.t.N(n);
+export const times = (ctx: Ctx, n: number) => ctx.t.times(n);
 
 export const scoreHref = (ctx: Ctx, a: number, b: number, league = ctx.linkLeague) =>
-  scorePageHref(league, `${Math.max(a, b)}-${Math.min(a, b)}`);
-export const clubHref = (ctx: Ctx, slug: string, league = ctx.linkLeague) => clubPageHref(league, slug);
+  scorePageHref(ctx.lang, league, `${Math.max(a, b)}-${Math.min(a, b)}`);
+export const clubHref = (ctx: Ctx, slug: string, league = ctx.linkLeague) => clubPageHref(ctx.lang, league, slug);
 
 export function clubLink(ctx: Ctx, slug: string, season?: number, league?: string): string {
   return `<a href="${clubHref(ctx, slug, league)}">${esc(ctx.clubName(slug, season))}</a>`;
@@ -70,10 +58,14 @@ export function matchLine(ctx: Ctx, m: Match, links = true): string {
 /** Resultado em palavras, vencedor primeiro: "Santos venceu Bahia" ou "Atlético-MG e Botafogo empataram". */
 export function resultLine(ctx: Ctx, m: Match): string {
   const link = (slug: string) => clubLink(ctx, slug, m.season, m.league);
-  if (m.hg === m.ag) return `${link(m.home)} e ${link(m.away)} empataram`;
+  if (m.hg === m.ag) return ctx.t.drew(link(m.home), link(m.away));
   const [w, l] = m.hg > m.ag ? [m.home, m.away] : [m.away, m.home];
-  return `${link(w)} venceu ${link(l)}`;
+  return ctx.t.beat(link(w), link(l));
 }
+
+/** "Grêmio 4–5 Fluminense", sem HTML. */
+export const plainMatch = (ctx: Ctx, m: Match) =>
+  `${ctx.clubName(m.home, m.season)} ${m.hg}–${m.ag} ${ctx.clubName(m.away, m.season)}`;
 
 /** Faixa de cor (0 = nunca, 1..8 = do mais raro ao mais comum, em escala log). */
 export function level(count: number, max: number): number {
@@ -128,10 +120,10 @@ export function gridCells(ctx: Ctx, matches: Match[], opt: GridOptions): { size:
         cls: `cell l${c ? (byFirst ? firstLevel(c) : level(c.count, max)) : 0}${ring}`,
         count: c?.count ?? 0,
         tip: c && byFirst
-          ? `Primeira vez: ${fmtDate(c.first.date)}, ${ctx.clubName(c.first.home, c.first.season)} ${c.first.hg}–${c.first.ag} ${ctx.clubName(c.first.away, c.first.season)} · ${times(c.count)}`
+          ? ctx.t.tipFirst(fmtDate(ctx, c.first.date), plainMatch(ctx, c.first), times(ctx, c.count))
           : c
-          ? `${times(c.count)} · última: ${fmtDate(c.last.date)}, ${ctx.clubName(c.last.home, c.last.season)} ${c.last.hg}–${c.last.ag} ${ctx.clubName(c.last.away, c.last.season)}`
-          : "Nunca aconteceu",
+          ? ctx.t.tipLast(times(ctx, c.count), fmtDate(ctx, c.last.date), plainMatch(ctx, c.last))
+          : ctx.t.tipNever,
         href: scoreHref(ctx, a, b),
       });
     }
@@ -142,7 +134,7 @@ export function gridCells(ctx: Ctx, matches: Match[], opt: GridOptions): { size:
 export function gridHtml(ctx: Ctx, matches: Match[], opt: GridOptions): string {
   const { size, cells } = gridCells(ctx, matches, opt);
   const [rowLabel, colLabel] =
-    opt.labels ?? (opt.mode === "norm" ? ["Placar do vencedor", "Placar do perdedor"] : ["Gols do mandante", "Gols do visitante"]);
+    opt.labels ?? (opt.mode === "norm" ? ctx.t.axisNorm : ctx.t.axisMando);
   let html = `<figure class="chart" data-size="${size}" data-mode="${opt.mode}" style="--n:${size + 1}">`;
   html += `<div class="y-label">${rowLabel}</div><div class="y-ticks">`;
   for (let a = size; a >= 0; a--) html += `<span>${a}</span>`;
@@ -166,9 +158,9 @@ export function seasonRange(matches: Match[]): [number, number] {
 }
 
 /** Legenda de cores. Com `years`, a escala é a da primeira vez (do ano mais antigo ao mais recente). */
-export function legendHtml(years?: [string, string]): string {
-  const [from, to] = years ?? ["Raro", "Comum"];
-  let html = `<div class="legend" aria-hidden="true"><span class="sw l0"></span><span>Nunca</span><span class="gap"></span>${years ? "<span>Primeira vez:</span>" : ""}<span>${from}</span>`;
+export function legendHtml(ctx: Ctx, years?: [string, string]): string {
+  const [from, to] = years ?? [ctx.t.legendRare, ctx.t.legendCommon];
+  let html = `<div class="legend" aria-hidden="true"><span class="sw l0"></span><span>${ctx.t.legendNever}</span><span class="gap"></span>${years ? `<span>${ctx.t.legendFirst}</span>` : ""}<span>${from}</span>`;
   for (let i = 1; i <= 8; i++) html += `<span class="sw l${i}"></span>`;
   return html + `<span>${to}</span></div>`;
 }
@@ -177,13 +169,13 @@ export function legendHtml(years?: [string, string]): string {
 
 /** Lista numerada de scorigamis: "22 de outubro de 2003  7–4  Santos venceu Bahia". */
 export function scorigamiListHtml(ctx: Ctx, list: Match[], mode: Mode = "norm"): string {
-  if (!list.length) return `<p class="muted">Nenhuma scorigami.</p>`;
+  if (!list.length) return `<p class="muted">${ctx.t.noScorigami}</p>`;
   const mixed = new Set(list.map((m) => m.league)).size > 1;
   return `<ol class="list">${list
     .map((m) => {
       const label = mode === "norm" ? `${hi(m)}–${lo(m)}` : `${m.hg}–${m.ag}`;
       const tag = mixed ? ` <span class="muted">· ${esc(ctx.leagueName(m.league))}</span>` : "";
-      return `<li><span class="date">${fmtLong(m.date)}</span> <a class="score" href="${scoreHref(ctx, m.hg, m.ag, m.league)}">${label}</a> <span>${resultLine(ctx, m)}${tag}</span></li>`;
+      return `<li><span class="date">${fmtLong(ctx, m.date)}</span> <a class="score" href="${scoreHref(ctx, m.hg, m.ag, m.league)}">${label}</a> <span>${resultLine(ctx, m)}${tag}</span></li>`;
     })
     .join("")}</ol>`;
 }
@@ -191,7 +183,7 @@ export function scorigamiListHtml(ctx: Ctx, list: Match[], mode: Mode = "norm"):
 /** "1–0: 4.416 vezes" */
 export function topScoresHtml(ctx: Ctx, cells: Map<string, Cell>, n = 10): string {
   return `<ol class="list">${mostCommon(cells, n)
-    .map((c) => `<li><a class="score" href="${scoreHref(ctx, c.a, c.b)}">${c.a}–${c.b}</a>: ${times(c.count)}</li>`)
+    .map((c) => `<li><a class="score" href="${scoreHref(ctx, c.a, c.b)}">${c.a}–${c.b}</a>: ${times(ctx, c.count)}</li>`)
     .join("")}</ol>`;
 }
 
@@ -202,7 +194,8 @@ export function topScoresHtml(ctx: Ctx, cells: Map<string, Cell>, n = 10): strin
  * (o recorte sem o filtro de time; senão todo placar seria exclusivo do time).
  */
 export function highlightsHtml(ctx: Ctx, matches: Match[], pool: Match[] = matches): string {
-  if (!matches.length) return `<p class="muted">Nenhum jogo neste recorte.</p>`;
+  const T = ctx.t;
+  if (!matches.length) return `<p class="muted">${T.noGames}</p>`;
   const cells = buildCells(matches, "norm");
   // Em ligas com muitos jogos todo placar de até 10 gols já saiu; aí a busca vai além.
   let unseen = unseenPlausible(matches, cells).slice(0, 6);
@@ -211,27 +204,19 @@ export function highlightsHtml(ctx: Ctx, matches: Match[], pool: Match[] = match
   const rout = biggestRouts(matches, 1)[0];
   const drought = longestDroughts(cells, 3);
   const top = exclusiveScores(pool, pool === matches ? cells : buildCells(pool, "norm"))[0];
-  const pct = ((common.count / matches.length) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  const pct = T.pct((common.count / matches.length) * 100);
   const score = (a: number, b: number) => `<a class="score" href="${scoreHref(ctx, a, b)}">${a}–${b}</a>`;
-  const join = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : xs[0] ?? "");
+  const mixed = new Set(matches.map((m) => m.league)).size > 1;
 
   const items = [
-    `<dt>Nunca aconteceram</dt><dd>${join(unseen.map((u) => score(u.a, u.b)))}. São os placares inéditos mais prováveis pela média de gols.</dd>`,
-    `<dt>Mais comum</dt><dd>${score(common.a, common.b)}, em ${plural(common.count, "jogo", "jogos")} (${pct}% do total).</dd>`,
-    `<dt>Maior goleada</dt><dd>${matchLine(ctx, rout)}, em ${fmtLong(rout.date)}${new Set(matches.map((m) => m.league)).size > 1 ? ` (${esc(ctx.leagueName(rout.league))})` : ""}.</dd>`,
-    `<dt>Há mais tempo sem acontecer</dt><dd>${join(
-      drought.map((c) => {
-        const y = yearsSince(c.last.date, ctx.today);
-        return `${score(c.a, c.b)} (${y < 1 ? "menos de 1 ano" : `há ${plural(y, "ano", "anos")}`})`;
-      }),
-    )}.</dd>`,
+    `<dt>${T.hlUnseen}</dt><dd>${T.hlUnseenText(T.join(unseen.map((u) => score(u.a, u.b))))}</dd>`,
+    `<dt>${T.hlCommon}</dt><dd>${T.hlCommonText(score(common.a, common.b), common.count, pct)}</dd>`,
+    `<dt>${T.hlRout}</dt><dd>${T.hlRoutText(matchLine(ctx, rout), fmtLong(ctx, rout.date), mixed ? esc(ctx.leagueName(rout.league)) : "")}</dd>`,
+    `<dt>${T.hlDrought}</dt><dd>${T.join(drought.map((c) => `${score(c.a, c.b)} (${T.hlAgo(yearsSince(c.last.date, ctx.today))})`))}.</dd>`,
   ];
   if (top) {
-    items.push(
-      `<dt>Mais placares exclusivos</dt><dd>${clubLink(ctx, top.club, undefined, pool.find((m) => m.home === top.club)?.league)}, com ${plural(top.scores.length, "placar que só ele teve", "placares que só ele teve")}: ${join(
-        top.scores.map((c) => score(c.a, c.b)),
-      )}.</dd>`,
-    );
+    const club = clubLink(ctx, top.club, undefined, pool.find((m) => m.home === top.club)?.league);
+    items.push(`<dt>${T.hlExclusive}</dt><dd>${T.hlExclusiveText(club, top.scores.length, T.join(top.scores.map((c) => score(c.a, c.b))))}</dd>`);
   }
   return `<dl class="facts">${items.join("")}</dl>`;
 }

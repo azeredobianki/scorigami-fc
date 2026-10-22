@@ -6,6 +6,8 @@ export interface Era {
   to: number;
 }
 
+import { t, type Lang } from "./i18n";
+
 // Fases de cada liga; sem liga escolhida, só as décadas.
 const PHASES: Record<string, { id: string; label: string; from: number; to?: number }[]> = {
   brasileirao: [
@@ -23,16 +25,17 @@ const PHASES: Record<string, { id: string; label: string; from: number; to?: num
   ],
 };
 
-export function eras(seasons: number[], liga = ""): Era[] {
+export function eras(seasons: number[], liga = "", lang: Lang = "pt"): Era[] {
+  const T = t(lang);
   if (!seasons.length) return [];
   const min = Math.min(...seasons);
   const max = Math.max(...seasons);
   const list: Era[] = [
-    { id: "todas", label: "Todas as eras", from: min, to: max },
-    ...(PHASES[liga] ?? []).map((p) => ({ id: p.id, label: p.label, from: p.from, to: p.to ?? max })),
+    { id: "todas", label: T.allEras, from: min, to: max },
+    ...(PHASES[liga] ?? []).map((p) => ({ id: p.id, label: T.phases[p.id] ?? p.label, from: p.from, to: p.to ?? max })),
   ];
   for (let d = Math.floor(min / 10) * 10; d <= max; d += 10) {
-    list.push({ id: `${d}s`, label: `Anos ${String(d).slice(2)} (${d}–${d + 9})`, from: d, to: d + 9 });
+    list.push({ id: `${d}s`, label: T.decade(d), from: d, to: d + 9 });
   }
   // Só mostra recortes que têm jogos e que não repetem o "todas".
   return list.filter(

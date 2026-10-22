@@ -1,7 +1,7 @@
 // Time-lapse: o gráfico acende temporada a temporada. Cada casa ganha a cor do
 // ano em que o placar apareceu pela primeira vez; as novas da temporada piscam.
-import { gridSize, hi, lo, scorigamis, type Match } from "../lib/core";
-import { fmtInt, gridHtml } from "../lib/render";
+import { gridSize, scoreKey, scorigamis, type Match, type Mode } from "../lib/core";
+import { gridHtml } from "../lib/render";
 import { loadData } from "./client-data";
 
 interface Milestone {
@@ -15,17 +15,21 @@ const LIGHT = [74, 24]; // luminosidade: mais clara = mais antiga, mais escura =
 
 export async function initTimelapse() {
   const data = await loadData();
+  const T = data.ctx("").t;
   const milestones: Milestone[] = JSON.parse(document.getElementById("tl-milestones")!.textContent ?? "[]");
   const range = document.getElementById("tl-range") as HTMLInputElement;
   const play = document.getElementById("tl-play") as HTMLButtonElement;
   const ligaSel = document.querySelector<HTMLSelectElement>("#tl-filters select");
+  const modeButtons = [...document.querySelectorAll<HTMLButtonElement>("#tl-filters button[data-mode]")];
+  // Maior × menor (padrão) ou mandante × visitante, como no gráfico da home.
+  let mode: Mode = "norm";
   const $ = (id: string) => document.getElementById(id)!;
   const nodes = new Map<string, HTMLElement>();
   // Redesenha o grid no tamanho da competição escolhida.
   function buildGrid(pool: Match[]) {
     const size = gridSize(pool);
     const holder = $("tl-grid");
-    holder.innerHTML = gridHtml(data.ctx(ligaSel?.value || data.leagues[0].slug), [], { mode: "norm", size });
+    holder.innerHTML = gridHtml(data.ctx(ligaSel?.value || data.leagues[0].slug), [], { mode, size });
     holder.querySelector("figure.chart")!.classList.add("by-year");
     nodes.clear();
     holder.querySelectorAll<HTMLElement>(".cell").forEach((el) => nodes.set(el.dataset.k!, el));
@@ -46,7 +50,8 @@ export async function initTimelapse() {
     const liga = ligaSel?.value ?? "";
     const pool = liga ? data.matches.filter((m) => m.league === liga) : data.matches;
     seasons = [...new Set(pool.map((m) => m.season))].sort((a, b) => a - b);
-    firsts = scorigamis(pool);
+    firsts = scorigamis(pool, mode);
+    modeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
     buildGrid(pool);
     document.querySelectorAll<HTMLElement>(".milestones li").forEach((li) => (li.hidden = !!liga && li.dataset.league !== liga));
     document.querySelectorAll(".tl-first").forEach((el) => (el.textContent = label(seasons[0])));
@@ -64,7 +69,7 @@ export async function initTimelapse() {
     const liga = ligaSel?.value ?? "";
     const ctx = data.ctx(liga || data.leagues[0].slug);
     const firstOf = new Map<string, Match>();
-    for (const m of firsts) if (m.season <= season && !firstOf.has(`${hi(m)}-${lo(m)}`)) firstOf.set(`${hi(m)}-${lo(m)}`, m);
+    for (const m of firsts) if (m.season <= season && !firstOf.has(scoreKey(m, mode))) firstOf.set(scoreKey(m, mode), m);
     const forward = i === shown + 1;
     for (const [key, el] of nodes) {
       const m = firstOf.get(key);
@@ -78,12 +83,12 @@ export async function initTimelapse() {
       }
       el.style.setProperty("--lum", m ? `${lum(m.season)}%` : "");
       el.dataset.tip = m
-        ? `Primeira vez em ${ctx.season(m.league, m.season)}: ${ctx.clubName(m.home, m.season)} ${m.hg}–${m.ag} ${ctx.clubName(m.away, m.season)}`
-        : "Ainda não tinha acontecido";
+        ? ctx.t.tlTipFirst(ctx.season(m.league, m.season), `${ctx.clubName(m.home, m.season)} ${m.hg}–${m.ag} ${ctx.clubName(m.away, m.season)}`)
+        : ctx.t.tlTipNot;
     }
     shown = i;
     $("tl-year").textContent = label(season);
-    $("tl-count").textContent = fmtInt(firstOf.size);
+    $("tl-count").textContent = ctx.t.N(firstOf.size);
     const notes = milestones.filter((x) => x.season === season && (!liga || x.league === liga));
     $("tl-note").innerHTML = notes.map((n) => `<b>${n.title}</b>${n.text}`).join("<br>");
   }
@@ -92,7 +97,7 @@ export async function initTimelapse() {
     clearInterval(timer);
     timer = undefined;
     play.textContent = "▶";
-    play.setAttribute("aria-label", "Reproduzir");
+    play.setAttribute("aria-label", T.tlPlay);
   }
 
   function start() {
@@ -102,7 +107,7 @@ export async function initTimelapse() {
       draw();
     }
     play.textContent = "❚❚";
-    play.setAttribute("aria-label", "Pausar");
+    play.setAttribute("aria-label", T.tlPause);
     timer = window.setInterval(() => {
       if (range.value === range.max) return stop();
       range.value = String(Number(range.value) + 1);
@@ -115,6 +120,14 @@ export async function initTimelapse() {
     stop();
     draw();
   });
+  modeButtons.forEach((b) =>
+    b.addEventListener("click", () => {
+      if (b.dataset.mode === mode) return;
+      mode = b.dataset.mode as Mode;
+      stop();
+      setup();
+    }),
+  );
   ligaSel?.addEventListener("change", () => {
     stop();
     setup();

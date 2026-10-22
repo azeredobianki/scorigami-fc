@@ -1,24 +1,8 @@
 ---
-import Base from "../../../layouts/Base.astro";
-import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues, matches } from "../../../lib/data";
-import { PREVIEW } from "../../../lib/links";
-import { ALL, scoreKeys, scorePage } from "../../../lib/pages";
-
-// Uma página por placar em cada liga, mais "todas" (o filtro Geral da home).
-export function getStaticPaths() {
-  if (PREVIEW) return [];
-  return [
-    ...leagues.flatMap((l) => scoreKeys(leagueMatches(l.slug)).map((placar) => ({ params: { liga: l.slug, placar } }))),
-    ...scoreKeys(matches).map((placar) => ({ params: { liga: ALL.slug, placar } })),
-  ];
-}
-
-const { liga, placar } = Astro.params as { liga: string; placar: string };
-const all = liga === ALL.slug;
-const page = scorePage(serverCtx(liga), all ? ALL : league(liga), all ? matches : leagueMatches(liga), placar);
+// Página em pt (cada idioma tem uma cópia desta rota). O conteúdo fica em src/views/Score.astro.
+import View from "../../../views/Score.astro";
+import { paths } from "../../../lib/paths";
+export const getStaticPaths = paths.score;
 ---
 
-<Base title={page.title} description={page.description} liga={all ? undefined : liga}>
-  <Fragment set:html={page.html} />
-</Base>
+<View lang="pt" {...Astro.params} />

@@ -1,0 +1,64 @@
+---
+import Base from "../layouts/Base.astro";
+import { scorigamis } from "../lib/core";
+import { serverCtx } from "../lib/ctx";
+import { league, leagueMatches, seasonOf } from "../lib/data";
+import { seasonHref } from "../lib/links";
+import { scorigamiListHtml } from "../lib/render";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang, liga } = Astro.props as { lang: Lang; liga: string };
+const T = t(lang);
+const lg = league(liga);
+const all = leagueMatches(liga);
+const list = scorigamis(all);
+const ctx = serverCtx(liga, lang);
+const seasons = [...new Set(all.map((m) => m.season))].sort((a, b) => a - b);
+const perSeason = seasons.map((s) => ({ season: s, count: list.filter((m) => m.season === s).length }));
+const max = Math.max(1, ...perSeason.map((p) => p.count));
+const top = [...perSeason].sort((x, y) => y.count - x.count || x.season - y.season)[0];
+const latest = perSeason[perSeason.length - 1];
+const lastNew = list[list.length - 1];
+const decades: number[] = [];
+for (let d = Math.ceil(seasons[0] / 10) * 10; d <= seasons[seasons.length - 1]; d += 10) decades.push(d);
+const S = (s: number) => seasonOf(liga, s);
+// Posição da década na faixa de barras (anos sem campeonato, como nas guerras, contam a temporada seguinte).
+const pos = (d: number) => ((seasons.findIndex((s) => s >= d) + 0.5) / seasons.length) * 100;
+---
+
+<Base
+  lang={lang}
+  title={T.leagueScorigamisTitle(lg)}
+  description={T.leagueScorigamisDesc(list.length, lg)}
+  active="scorigamis"
+  liga={liga}
+  switchTo="scorigamis"
+>
+  <h1>Scorigamis</h1>
+
+  <h2>{T.mostRecentH}</h2>
+  <Fragment set:html={scorigamiListHtml(ctx, list.slice(-25).reverse())} />
+
+  <h2>{T.perSeason}</h2>
+  <p>{T.perSeasonText(S(top.season), top.count, S(latest.season), latest.count, lg, S(lastNew.season))}</p>
+  <div class="seasons" role="img" aria-label={T.perSeasonLabel}>
+    {perSeason.map((p) => (
+      <a
+        href={seasonHref(lang, liga, p.season)}
+        style={`height:${p.count ? Math.max(2, (p.count / max) * 100) : 0}%`}
+        data-k={S(p.season)}
+        data-tip={T.nScorigamis(p.count)}
+        aria-label={`${S(p.season)}: ${T.nScorigamis(p.count)}`}
+      />
+    ))}
+  </div>
+  <div class="decades" aria-hidden="true">
+    {decades.map((d) => <span style={`left:${pos(d)}%`}>{d}</span>)}
+  </div>
+
+  <ul class="season-list">
+    {[...perSeason].reverse().map((p) => (
+      <li><a href={seasonHref(lang, liga, p.season)}>{S(p.season)}</a> <span class="muted">{p.count}</span></li>
+    ))}
+  </ul>
+</Base>

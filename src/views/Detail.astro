@@ -1,0 +1,19 @@
+---
+// Na prévia, as páginas de temporada, placar e time são uma só para cada tipo,
+// desenhadas no navegador (ver scripts/detail.ts). O site normal não gera estas.
+import Base from "../layouts/Base.astro";
+import { t, type Lang } from "../lib/i18n";
+
+const { lang, detail } = Astro.props as { lang: Lang; detail: "temporada" | "placar" | "time" };
+const T = t(lang);
+const active = detail === "temporada" ? "scorigamis" : detail === "time" ? "times" : undefined;
+---
+
+<Base lang={lang} title={T.loading} description="Scorigami FC" active={active}>
+  <div id="detail" data-kind={detail}><p class="muted">{T.loading}…</p></div>
+  <script>
+    import { initDetail } from "../scripts/detail";
+    const el = document.getElementById("detail")!;
+    initDetail(el.dataset.kind as "temporada" | "placar" | "time");
+  </script>
+</Base>

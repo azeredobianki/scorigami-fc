@@ -1,0 +1,15 @@
+---
+import Base from "../layouts/Base.astro";
+import { serverCtx } from "../lib/ctx";
+import { league, leagueMatches, matches } from "../lib/data";
+import type { Lang } from "../lib/i18n";
+import { ALL, allLeague, scorePage } from "../lib/pages";
+
+const { lang, liga, placar } = Astro.props as { lang: Lang; liga: string; placar: string };
+const all = liga === ALL.slug;
+const page = scorePage(serverCtx(liga, lang), all ? allLeague(lang) : league(liga), all ? matches : leagueMatches(liga), placar);
+---
+
+<Base lang={lang} title={page.title} description={page.description} liga={all ? undefined : liga}>
+  <Fragment set:html={page.html} />
+</Base>
