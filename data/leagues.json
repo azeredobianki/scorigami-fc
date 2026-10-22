@@ -6,5 +6,6 @@
   {"slug": "bundesliga", "name": "Bundesliga", "short": "Bundesliga", "country": "Alemanha", "flag": "🇩🇪", "since": 1963, "split": true, "fem": true},
   {"slug": "ligue-1", "name": "Ligue 1", "short": "Ligue 1", "country": "França", "flag": "🇫🇷", "since": 1938, "split": true, "fem": true},
   {"slug": "eredivisie", "name": "Eredivisie", "short": "Eredivisie", "country": "Holanda", "flag": "🇳🇱", "since": 1956, "split": true, "fem": true},
-  {"slug": "primeira-liga", "name": "Primeira Liga", "short": "Primeira Liga", "country": "Portugal", "flag": "🇵🇹", "since": 1994, "split": true, "fem": true}
+  {"slug": "primeira-liga", "name": "Primeira Liga", "short": "Primeira Liga", "country": "Portugal", "flag": "🇵🇹", "since": 1994, "split": true, "fem": true},
+  {"slug": "mls", "name": "MLS", "short": "MLS", "country": "Estados Unidos", "flag": "🇺🇸", "since": 1996, "split": false, "fem": true}
 ]

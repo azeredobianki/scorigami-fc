@@ -9,7 +9,7 @@ import { fmtInt, fmtLong, gridHtml, highlightsHtml, legendHtml, scorigamiListHtm
 
 const ctx = serverCtx();
 const europe = (() => {
-  const xs = leagues.filter((l) => l.slug !== "brasileirao").map((l) => (l.slug === "premier-league" ? `${l.short} (desde ${l.since})` : l.short));
+  const xs = leagues.filter((l) => l.slug !== "brasileirao" && l.slug !== "mls").map((l) => (l.slug === "premier-league" ? `${l.short} (desde ${l.since})` : l.short));
   return xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : xs[0];
 })();
 const cells = buildCells(matches, "norm");
@@ -26,7 +26,7 @@ const clubGroups = leagues.map((l) => {
 
 <Base
   title="Scorigami FC"
-  description="Todos os placares finais da história do Brasileirão e das principais ligas europeias em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
+  description="Todos os placares finais da história do Brasileirão e das principais ligas europeias e da MLS em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
   active="grafico"
 >
   <form class="bar" id="filters" onsubmit="return false" aria-label="Filtros do gráfico">
@@ -66,7 +66,7 @@ const clubGroups = leagues.map((l) => {
   <h2>O que é Scorigami?</h2>
   <p>
     Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e das
-    principais ligas europeias: {europe}. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes: no filtro Geral, em nenhuma das competições; com uma
+    principais ligas europeias ({europe}), além da MLS desde 1996. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes: no filtro Geral, em nenhuma das competições; com uma
     liga escolhida, naquela liga. O site acompanha cada placar
     novo e quantas vezes cada um já se repetiu. A ideia vem do <a href="https://nflscorigami.com/">NFL Scorigami</a>, criado
     por Jon Bois.
