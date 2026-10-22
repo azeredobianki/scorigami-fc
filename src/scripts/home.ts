@@ -1,13 +1,14 @@
-// Filtros da home: competição, time, era e tipo de grid. O estado fica na URL
+// Filtros da home: competição, time, era e tipo de gráfico. O estado fica na URL
 // (?liga=&time=&era=&mando=1) para que um recorte possa ser compartilhado.
-import { buildCells, gridSize, scorigamis, type Mode } from "../lib/core";
+import { buildCells, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
 import { eras } from "../lib/eras";
-import { fmtDate, fmtInt, gridHtml, highlightsHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
+import { fmtInt, highlightsHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
 import { loadData } from "./client-data";
+import { paintGrid } from "./paint";
 
 export async function initHome() {
   const form = document.getElementById("filters") as HTMLFormElement;
-  const buttons = [...document.querySelectorAll<HTMLButtonElement>(".toggle button")];
+  const buttons = [...form.querySelectorAll<HTMLButtonElement>(".switch button")];
   const $ = (id: string) => document.getElementById(id)!;
   const select = (name: string) => form.elements.namedItem(name) as HTMLSelectElement;
 
@@ -16,10 +17,10 @@ export async function initHome() {
   select("time").value = params.get("time") ?? "";
   if (params.get("era")) select("era").value = params.get("era")!;
   let mode: Mode = params.get("mando") ? "mando" : "norm";
+  buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
 
   const data = await loadData();
-  const seasons = [...new Set(data.matches.map((m) => m.season))];
-  const eraList = eras(seasons);
+  const eraList = eras([...new Set(data.matches.map((m) => m.season))]);
 
   function update(push: boolean) {
     const liga = select("liga").value;
@@ -28,22 +29,18 @@ export async function initHome() {
     buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
 
     const inLeague = liga ? data.matches.filter((m) => m.league === liga) : data.matches;
-    const keep = (m: (typeof inLeague)[number]) =>
-      (!time || m.home === time || m.away === time) && m.season >= era.from && m.season <= era.to;
+    const inEra = (m: Match) => m.season >= era.from && m.season <= era.to;
+    const keep = (m: Match) => (!time || m.home === time || m.away === time) && inEra(m);
     const shown = inLeague.filter(keep);
-    const inEra = inLeague.filter((m) => m.season >= era.from && m.season <= era.to);
     // Scorigami é sempre medida na liga inteira; o recorte só filtra a lista.
     const recent = scorigamis(inLeague, mode).filter(keep).slice(-5).reverse();
-    const cells = buildCells(shown, mode);
     const ctx = data.ctx(liga || data.leagues[0].slug);
 
-    $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> de ${fmtInt(data.matches.length)} jogos · ${fmtInt(
-      cells.size,
-    )} placares diferentes · último jogo em ${fmtDate(ctx.today)}`;
-    $("grid").innerHTML = gridHtml(ctx, shown, { mode, size: gridSize(inLeague) });
-    $("recent").innerHTML = scorigamiListHtml(ctx, recent, false, mode);
-    $("top").innerHTML = topScoresHtml(ctx, cells, shown.length || 1);
-    $("highlights").innerHTML = highlightsHtml(ctx, shown, inEra);
+    $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> / ${fmtInt(data.matches.length)} jogos`;
+    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague) });
+    $("recent").innerHTML = scorigamiListHtml(ctx, recent, mode);
+    $("top").innerHTML = topScoresHtml(ctx, buildCells(shown, mode));
+    $("highlights").innerHTML = highlightsHtml(ctx, shown, inLeague.filter(inEra));
 
     if (push) {
       const q = new URLSearchParams();

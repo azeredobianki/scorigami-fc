@@ -1,47 +1,109 @@
 ---
 import Base from "../layouts/Base.astro";
-import { leagues } from "../lib/data";
+import { biggestRouts, gridSize, hi, lo, scorigamis } from "../lib/core";
+import { serverCtx } from "../lib/ctx";
+import { clubName, leagueMatches, leagues, matches } from "../lib/data";
+import { href } from "../lib/links";
+import { fmtLong, gridHtml } from "../lib/render";
+
+interface Milestone {
+  league: string;
+  season: number;
+  title: string;
+  text: string;
+}
+
+// Marcos: os fixos são escritos à mão, os outros saem dos dados.
+const FIXED: Milestone[] = [
+  { league: "brasileirao", season: 1967, title: "Chega o Robertão", text: "O Torneio Roberto Gomes Pedrosa amplia o campeonato para clubes de vários estados." },
+  { league: "brasileirao", season: 1971, title: "Primeiro Campeonato Nacional", text: "Nasce o Campeonato Brasileiro com esse nome, com 20 clubes." },
+  { league: "brasileirao", season: 2003, title: "Pontos corridos", text: "O Brasileirão passa a ser disputado em turno e returno, sem mata-mata." },
+];
+
+const milestones: Milestone[] = [];
+for (const l of leagues) {
+  const all = leagueMatches(l.slug);
+  if (!all.length) continue;
+  const first = all[0];
+  const name = (slug: string, season: number) => clubName(slug, season);
+  milestones.push({
+    league: l.slug,
+    season: first.season,
+    title: "O primeiro jogo",
+    text: `${name(first.home, first.season)} ${first.hg}, ${name(first.away, first.season)} ${first.ag} em ${fmtLong(first.date)}.`,
+  });
+  const rout = biggestRouts(all, 1)[0];
+  milestones.push({
+    league: l.slug,
+    season: rout.season,
+    title: `${name(rout.home, rout.season)} ${rout.hg}, ${name(rout.away, rout.season)} ${rout.ag}`,
+    text: `A maior goleada da história, em ${fmtLong(rout.date)}.`,
+  });
+  const last = scorigamis(all).at(-1)!;
+  milestones.push({
+    league: l.slug,
+    season: last.season,
+    title: `A última scorigami: ${hi(last)}–${lo(last)}`,
+    text: `${name(last.home, last.season)} ${last.hg}, ${name(last.away, last.season)} ${last.ag} em ${fmtLong(last.date)}. Nenhum placar inédito desde então.`,
+  });
+}
+milestones.push(...FIXED.filter((f) => leagues.some((l) => l.slug === f.league)));
+milestones.sort((a, b) => a.season - b.season);
+
+const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
+const size = gridSize(matches);
+const ctx = serverCtx();
 ---
 
 <Base
   title="Time-lapse"
-  description="Veja o gráfico de placares do futebol brasileiro se preencher temporada a temporada."
+  description="Veja o gráfico de placares do Brasileirão se preencher temporada a temporada, desde 1959."
   active="timelapse"
 >
-  <h1>Time-lapse</h1>
-  <p class="lede">O gráfico se preenche temporada a temporada. As casas contornadas são as scorigamis daquele ano.</p>
+  <h1>Todos os placares do Brasileirão, de {seasons[0]} até hoje</h1>
+  <p>Cada casa acende na primeira vez que aquele placar final acontece. <a href={href("")}>Veja quantas vezes cada placar aconteceu.</a></p>
 
-  <form class="filters" id="tl-filters" onsubmit="return false">
-    <label>Competição
-      <select name="liga">
-        <option value="">Todas as ligas</option>
-        {leagues.map((l) => <option value={l.slug}>{l.flag} {l.short}</option>)}
-      </select>
-    </label>
-  </form>
+  {
+    leagues.length > 1 && (
+      <form class="bar" id="tl-filters" onsubmit="return false">
+        <select name="liga" aria-label="Competição">
+          <option value="">Todas as competições</option>
+          {leagues.map((l) => <option value={l.slug}>{l.short}</option>)}
+        </select>
+      </form>
+    )
+  }
+
+  <div class="tl-head">
+    <span class="tl-year" id="tl-year">{seasons[seasons.length - 1]}</span>
+    <span class="tl-count"><b id="tl-count">–</b> placares únicos</span>
+  </div>
+  <p class="tl-note" id="tl-note" aria-live="polite"></p>
+
+  <div id="tl-grid" set:html={gridHtml(ctx, [], { mode: "norm", size })} />
 
   <div class="player">
-    <button type="button" class="play" id="tl-play">▶ Play</button>
-    <input type="range" id="tl-range" min="0" max="0" value="0" aria-label="Temporada" />
+    <button type="button" id="tl-play" aria-label="Reproduzir">▶</button>
+    <input type="range" id="tl-range" min="0" max={seasons.length - 1} value={seasons.length - 1} aria-label="Temporada" />
+  </div>
+  <div class="range-ends"><span>{seasons[0]}</span><span>{seasons[seasons.length - 1]}</span></div>
+
+  <div class="year-legend" aria-hidden="true">
+    <span>Primeira vez</span><span>{seasons[0]}</span><span class="ramp" id="tl-ramp"></span><span>{seasons[seasons.length - 1]}</span>
+    <span class="new"></span><span>Novo na temporada</span>
   </div>
 
-  <div class="split">
-    <section>
-      <div id="tl-grid"><p class="muted">Carregando…</p></div>
-    </section>
-    <aside>
-      <section class="panel">
-        <div class="year-big" id="tl-year">–</div>
-        <p class="counter" id="tl-counter"></p>
-        <p id="tl-milestone" class="lede"></p>
-      </section>
-      <section class="panel">
-        <h2>Scorigamis do ano</h2>
-        <div id="tl-list"></div>
-      </section>
-    </aside>
-  </div>
+  <h2>Marcos</h2>
+  <ol class="milestones">
+    {milestones.map((m) => (
+      <li>
+        <button type="button" data-season={m.season} data-league={m.league}>{m.season}</button>
+        <div><h3>{m.title}</h3><p>{m.text}</p></div>
+      </li>
+    ))}
+  </ol>
 
+  <script type="application/json" id="tl-milestones" set:html={JSON.stringify(milestones)} />
   <script>
     import { initTimelapse } from "../scripts/timelapse";
     initTimelapse();

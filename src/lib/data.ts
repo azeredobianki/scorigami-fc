@@ -72,23 +72,27 @@ export function league(slug: string): League {
   return l;
 }
 
+/** Jogos de uma liga: data/matches/<liga>.csv mais arquivos extras como <liga>-historico.csv. */
 function loadLeague(slug: string): Match[] {
-  const file = path.join(DATA, "matches", `${slug}.csv`);
-  if (!fs.existsSync(file)) return [];
-  return parseCsv(fs.readFileSync(file, "utf-8")).map((r) => {
-    const notes = [r.note];
-    if (r.pens_home) notes.push(`pênaltis ${r.pens_home}–${r.pens_away}`);
-    return {
-      league: r.league,
-      season: Number(r.season),
-      date: r.date,
-      home: r.home,
-      away: r.away,
-      hg: Number(r.home_goals),
-      ag: Number(r.away_goals),
-      note: notes.filter(Boolean).join("; ") || undefined,
-    };
-  });
+  const dir = path.join(DATA, "matches");
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".csv") && (f === `${slug}.csv` || f.startsWith(`${slug}-`)));
+  return files.flatMap((f) =>
+    parseCsv(fs.readFileSync(path.join(dir, f), "utf-8")).map((r) => {
+      const notes = [r.note];
+      if (r.pens_home) notes.push(`pênaltis ${r.pens_home}–${r.pens_away}`);
+      return {
+        league: r.league,
+        season: Number(r.season),
+        date: r.date,
+        home: r.home,
+        away: r.away,
+        hg: Number(r.home_goals),
+        ag: Number(r.away_goals),
+        stage: r.stage || undefined,
+        note: notes.filter(Boolean).join("; ") || undefined,
+      };
+    }),
+  );
 }
 
 /** Todos os jogos de todas as ligas, em ordem de data. */

@@ -9,6 +9,7 @@ export interface Match {
   away: string;
   hg: number;
   ag: number;
+  stage?: string;
   note?: string;
 }
 

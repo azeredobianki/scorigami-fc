@@ -1,10 +1,10 @@
 ---
-import { href } from "../../../lib/links";
 import Base from "../../../layouts/Base.astro";
-import { buildCells, exclusiveScores, forClub, gridSize, scorigamis, type Match } from "../../../lib/core";
+import { buildCells, exclusiveScores, forClub, gridSize, hi, lo, scorigamis, type Match } from "../../../lib/core";
 import { serverCtx } from "../../../lib/ctx";
-import { club, league, leagueMatches, leagues } from "../../../lib/data";
-import { fmtDate, fmtInt, gridHtml, legendHtml, matchLine, plural, scorigamiListHtml } from "../../../lib/render";
+import { club, clubName, league, leagueMatches, leagues } from "../../../lib/data";
+import { href } from "../../../lib/links";
+import { clubLink, fmtInt, fmtLong, gridHtml, legendHtml, plural, times } from "../../../lib/render";
 
 export function getStaticPaths() {
   return leagues.flatMap((l) =>
@@ -20,125 +20,147 @@ const ctx = serverCtx(liga);
 const mine = all.filter((m) => m.home === slug || m.away === slug);
 const leagueCells = buildCells(all);
 const myCells = buildCells(mine);
+const seasons = [...new Set(mine.map((m) => m.season))].sort((a, b) => a - b);
+const current = Math.max(...all.map((m) => m.season));
+const span = `${seasons[0]}–${seasons[seasons.length - 1] === current ? "hoje" : seasons[seasons.length - 1]}`;
 
-let w = 0, d = 0, l = 0, gf = 0, ga = 0;
+let w = 0, d = 0, l = 0;
 for (const m of mine) {
   const r = forClub(m, slug);
-  gf += r.gf;
-  ga += r.ga;
   if (r.gf > r.ga) w++;
   else if (r.gf === r.ga) d++;
   else l++;
 }
-const pct = mine.length ? ((w / mine.length) * 100).toFixed(1).replace(".", ",") : "0";
-const myScorigamis = scorigamis(all).filter((m) => m.home === slug || m.away === slug);
-const exclusive = exclusiveScores(all, leagueCells).find((e) => e.club === slug)?.scores ?? [];
+const pct = ((w / mine.length) * 100).toFixed(1).replace(".", ",");
+const myScorigamis = scorigamis(all).filter((m) => m.home === slug || m.away === slug).reverse();
+const exclusive = new Set((exclusiveScores(all, leagueCells).find((e) => e.club === slug)?.scores ?? []).map((x) => x.key));
 
-// Visão do clube: gols dele nas linhas, do adversário nas colunas.
-const perspective: Match[] = mine.map((m) => {
+// Nomes usados ao longo do tempo, com anos e jogos.
+const nameEras = new Map<string, { from: number; to: number; games: number }>();
+for (const m of mine) {
+  const n = clubName(slug, m.season);
+  const e = nameEras.get(n) ?? { from: m.season, to: m.season, games: 0 };
+  e.from = Math.min(e.from, m.season);
+  e.to = Math.max(e.to, m.season);
+  e.games++;
+  nameEras.set(n, e);
+}
+
+// O jogo mais recente do clube com cada placar.
+const latestBy = new Map<string, Match>();
+for (const m of mine) latestBy.set(`${hi(m)}-${lo(m)}`, m);
+const rows = [...myCells.values()].map((cell) => ({ cell, league: leagueCells.get(cell.key)!.count, m: latestBy.get(cell.key)! }));
+const rarest = [...rows].sort((a, b) => a.league - b.league || b.m.date.localeCompare(a.m.date)).slice(0, 10);
+const common = [...rows].sort((a, b) => b.cell.count - a.cell.count).slice(0, 10);
+const onlyHere = rows.filter((r) => exclusive.has(r.cell.key)).length;
+
+const outcome = (m: Match) => {
   const r = forClub(m, slug);
-  return { ...m, hg: r.gf, ag: r.ga };
-});
-const size = gridSize(all);
-
-const byMargin = (sign: 1 | -1) =>
-  [...mine]
-    .filter((m) => sign * (forClub(m, slug).gf - forClub(m, slug).ga) > 0)
-    .sort((x, y) => {
-      const rx = forClub(x, slug), ry = forClub(y, slug);
-      return sign * (ry.gf - ry.ga - (rx.gf - rx.ga)) || (sign > 0 ? ry.gf - rx.gf : ry.ga - rx.ga);
-    })[0];
-const bestWin = byMargin(1);
-const worstLoss = byMargin(-1);
-
-const rarity = [...myCells.values()].map((cell) => ({ cell, league: leagueCells.get(cell.key)!.count }));
-const rarest = [...rarity].sort((a, b) => a.league - b.league || b.cell.a + b.cell.b - (a.cell.a + a.cell.b)).slice(0, 10);
-const common = [...rarity].sort((a, b) => b.cell.count - a.cell.count).slice(0, 10);
+  const res = r.gf > r.ga ? "V" : r.gf < r.ga ? "D" : "E";
+  const verb = r.gf > r.ga ? "sobre" : r.gf < r.ga ? "para" : "com";
+  return { res, verb, r };
+};
+const scorigamiItem = (m: Match) => {
+  const { res, verb, r } = outcome(m);
+  return `<li><span class="date">${fmtLong(m.date)}</span> <span class="muted">${res}</span> <a class="score" href="${href(`${liga}/placar/${hi(m)}-${lo(m)}`)}">${r.gf}–${r.ga}</a> ${verb} ${clubLink(ctx, r.opp, m.season)}</li>`;
+};
+const SHOW = 25;
 ---
 
 <Base
-  title={`${c.name} no ${lg.short}`}
-  description={`Todos os placares do ${c.name} no ${lg.name}: ${plural(mine.length, "jogo", "jogos")}, ${plural(myCells.size, "placar diferente", "placares diferentes")} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}.`}
+  title={`Scorigamis do ${c.name}`}
+  description={`${c.name} no ${lg.name}: ${plural(mine.length, "jogo", "jogos")} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}.`}
   active="times"
 >
-  <p class="muted"><a href={href(`${liga}/times`)}>Times do {lg.short}</a> · {c.state}</p>
+  <a class="back" href={href(`${liga}/times`)}>← Todos os times</a>
   <h1>{c.name}</h1>
-  {c.names && <p class="muted">Nomes na liga: {c.names.map((n) => `${n.name} (${n.from ?? "…"}–${n.to ?? "hoje"})`).join(", ")}</p>}
+  <p class="muted">{span}</p>
+  <p>
+    {plural(mine.length, "partida", "partidas")} do {lg.short} desde {seasons[0]} e{" "}
+    {plural(myScorigamis.length, "scorigami", "scorigamis")}, placares finais que o {lg.short} nunca tinha visto.
+  </p>
 
   <div class="stats">
-    <div class="stat"><b>{fmtInt(mine.length)}</b><span>jogos</span></div>
-    <div class="stat"><b>{w}–{d}–{l}</b><span>V–E–D ({pct}% de vitórias)</span></div>
-    <div class="stat"><b>{fmtInt(gf)}–{fmtInt(ga)}</b><span>gols pró–contra</span></div>
-    <div class="stat"><b>{myCells.size}</b><span>placares diferentes</span></div>
-    <div class="stat"><b>{myScorigamis.length}</b><span>scorigamis</span></div>
-    <div class="stat"><b>{exclusive.length}</b><span>placares exclusivos</span></div>
+    <div><b>{fmtInt(mine.length)}</b><span>Jogos</span></div>
+    <div><b>{fmtInt(w)}</b><span>Vitórias</span></div>
+    <div><b>{fmtInt(d)}</b><span>Empates</span></div>
+    <div><b>{fmtInt(l)}</b><span>Derrotas</span></div>
+    <div><b>{myScorigamis.length}</b><span>Scorigamis</span></div>
   </div>
+  <p class="muted">{pct}% de vitórias · {plural(myCells.size, "placar final diferente", "placares finais diferentes")}</p>
 
-  <div class="split">
-    <section>
-      <h2>Placares do {c.name}</h2>
-      <Fragment
-        set:html={gridHtml(ctx, perspective, {
-          mode: "mando",
-          size,
-          ring: new Set(myScorigamis.map((m) => { const r = forClub(m, slug); return `${r.gf}-${r.ga}`; })),
-          labels: [`Gols do ${c.name}`, "Gols do adversário"],
-        })}
-      />
-      <Fragment set:html={legendHtml()} />
-      <p class="muted">Contornados: placares que foram scorigami em jogos do {c.name}.</p>
-    </section>
-    <aside>
-      <section class="panel">
-        <h2>Maior vitória e maior derrota</h2>
-        <ul class="games">
-          {bestWin && <li><span set:html={matchLine(ctx, bestWin)} /><span class="muted">{fmtDate(bestWin.date)}</span></li>}
-          {worstLoss && <li><span set:html={matchLine(ctx, worstLoss)} /><span class="muted">{fmtDate(worstLoss.date)}</span></li>}
-        </ul>
-      </section>
-      {
-        exclusive.length > 0 && (
-          <section class="panel">
-            <h2>Placares que só o {c.name} teve</h2>
-            <p class="chips">
-              {exclusive.map((e) => <a class="chip" href={href(`${liga}/placar/${e.key}`)}>{e.a}–{e.b}</a>)}
-            </p>
-          </section>
-        )
-      }
-    </aside>
-  </div>
-
-  <div class="split">
-    <section>
-      <h2>10 placares mais raros</h2>
-      <table class="data">
-        <thead><tr><th>Placar</th><th class="n">Jogos do clube</th><th class="n">Na liga</th></tr></thead>
-        <tbody>
-          {rarest.map((r) => (
-            <tr><td><a class="chip" href={href(`${liga}/placar/${r.cell.key}`)}>{r.cell.a}–{r.cell.b}</a></td><td class="n">{r.cell.count}</td><td class="n">{fmtInt(r.league)}</td></tr>
+  {
+    nameEras.size > 1 && (
+      <>
+        <h2>Nomes ao longo do tempo</h2>
+        <ol class="list">
+          {[...nameEras.entries()].map(([n, e]) => (
+            <li>{n}, {e.from === e.to ? e.from : `${e.from}–${e.to}`}, {plural(e.games, "jogo", "jogos")}</li>
           ))}
-        </tbody>
-      </table>
-    </section>
-    <section>
-      <h2>10 placares mais comuns</h2>
-      <table class="data">
-        <thead><tr><th>Placar</th><th class="n">Clube</th><th class="n">% clube</th><th class="n">% liga</th></tr></thead>
-        <tbody>
-          {common.map((r) => (
-            <tr>
-              <td><a class="chip" href={href(`${liga}/placar/${r.cell.key}`)}>{r.cell.a}–{r.cell.b}</a></td>
-              <td class="n">{r.cell.count}</td>
-              <td class="n">{((r.cell.count / mine.length) * 100).toFixed(1).replace(".", ",")}%</td>
-              <td class="n">{((r.league / all.length) * 100).toFixed(1).replace(".", ",")}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+        </ol>
+      </>
+    )
+  }
+
+  <div style="margin-top:1.5rem">
+    <Fragment set:html={gridHtml(ctx, all, { mode: "norm", size: gridSize(all), ring: new Set(myScorigamis.map((m) => `${hi(m)}-${lo(m)}`)) })} />
+    <Fragment set:html={legendHtml()} />
+  </div>
+  <p class="muted">Contornadas em vermelho: scorigamis em jogos deste clube.</p>
+
+  <h2>Finais mais raros</h2>
+  <p>
+    Placares deste clube que o {lg.short} menos viu.{" "}
+    {onlyHere > 0 && `${plural(onlyHere, "deles só aconteceu", "deles só aconteceram")} em jogos deste clube.`}
+  </p>
+  <div class="table-scroll">
+    <table class="data">
+      <caption>Jogo mais recente do clube com cada placar</caption>
+      <thead><tr><th>Placar</th><th>{c.name}</th><th class="n">Todo o {lg.short}</th></tr></thead>
+      <tbody>
+        {rarest.map((r) => (
+          <tr>
+            <td><a class="score" href={href(`${liga}/placar/${r.cell.key}`)}>{r.cell.a}–{r.cell.b}</a></td>
+            <td>{fmtLong(r.m.date)} <span class="muted">{outcome(r.m).verb}</span> <Fragment set:html={clubLink(ctx, outcome(r.m).r.opp, r.m.season)} /></td>
+            <td class="n">{times(r.league)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   </div>
 
-  <h2>Scorigamis do {c.name}</h2>
-  <Fragment set:html={scorigamiListHtml(ctx, [...myScorigamis].reverse())} />
+  <h2>Finais mais comuns</h2>
+  <p>Placares que este clube mais repetiu.</p>
+  <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Placar</th><th class="n">{c.name}</th><th class="n">Todo o {lg.short}</th></tr></thead>
+      <tbody>
+        {common.map((r) => (
+          <tr>
+            <td><a class="score" href={href(`${liga}/placar/${r.cell.key}`)}>{r.cell.a}–{r.cell.b}</a></td>
+            <td class="n">{times(r.cell.count)}</td>
+            <td class="n">{times(r.league)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Scorigamis ({myScorigamis.length})</h2>
+  {
+    myScorigamis.length ? (
+      <>
+        <p>Jogos deste clube que terminaram com um placar inédito no {lg.short}, do mais recente ao mais antigo.</p>
+        <ol class="list" set:html={myScorigamis.slice(0, SHOW).map(scorigamiItem).join("")} />
+        {myScorigamis.length > SHOW && (
+          <details class="all">
+            <summary>Mostrar todas as {myScorigamis.length}</summary>
+            <ol class="list" start={SHOW + 1} set:html={myScorigamis.slice(SHOW).map(scorigamiItem).join("")} />
+          </details>
+        )}
+      </>
+    ) : (
+      <p class="muted">Nenhuma scorigami ainda.</p>
+    )
+  }
 </Base>

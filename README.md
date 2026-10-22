@@ -32,4 +32,4 @@ npm run build:preview  # versão com links .html relativos, para hospedar sem UR
 
 - 2003–2024: [adaoduque/Brasileirao_Dataset](https://github.com/adaoduque/Brasileirao_Dataset)
 - 2025–2026: [openfootball/football.json](https://github.com/openfootball/football.json) (domínio público)
-- 1959–2002: [RSSSF Brasil](https://rsssfbrasil.com/historical.htm) (em carga)
+- 1959–2002: [RSSSF Brasil](https://rsssfbrasil.com/historical.htm), via `scripts/ingest_rsssf.py` → `data/matches/brasileirao-historico.csv` (relatório da carga ao lado)

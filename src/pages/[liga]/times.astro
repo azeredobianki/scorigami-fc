@@ -1,8 +1,7 @@
 ---
-import { href } from "../../lib/links";
 import Base from "../../layouts/Base.astro";
 import { club, league, leagueMatches, leagues } from "../../lib/data";
-import { fmtInt } from "../../lib/render";
+import { href } from "../../lib/links";
 
 export function getStaticPaths() {
   return leagues.map((l) => ({ params: { liga: l.slug } }));
@@ -12,59 +11,53 @@ const { liga } = Astro.params as { liga: string };
 const lg = league(liga);
 const all = leagueMatches(liga);
 const current = Math.max(...all.map((m) => m.season));
-const stats = new Map<string, { seasons: Set<number>; games: number }>();
+const seasonsOf = new Map<string, Set<number>>();
 for (const m of all)
   for (const c of [m.home, m.away]) {
-    const s = stats.get(c) ?? { seasons: new Set(), games: 0 };
-    s.seasons.add(m.season);
-    s.games++;
-    stats.set(c, s);
+    const s = seasonsOf.get(c) ?? new Set<number>();
+    s.add(m.season);
+    seasonsOf.set(c, s);
   }
-const rows = [...stats.entries()]
-  .map(([slug, s]) => {
-    const seasons = [...s.seasons].sort((a, b) => a - b);
+const rows = [...seasonsOf.entries()]
+  .map(([slug, set]) => {
+    const seasons = [...set].sort((a, b) => a - b);
     const c = club(slug);
     const old = (c.names ?? []).map((n) => n.name).filter((n) => n !== c.name);
-    return { slug, name: c.name, state: c.state, old, seasons, games: s.games };
+    const first = seasons[0];
+    const last = seasons[seasons.length - 1];
+    return {
+      slug,
+      name: c.name,
+      state: c.state,
+      old,
+      count: seasons.length,
+      years: last === current ? `${first}–hoje` : first === last ? `${first}` : `${first}–${last}`,
+      now: last === current,
+    };
   })
-  .sort((a, b) => b.seasons.length - a.seasons.length || a.name.localeCompare(b.name, "pt-BR"));
-const now = rows.filter((r) => r.seasons.includes(current)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-const others = rows.filter((r) => !r.seasons.includes(current));
+  .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 const groups = [
-  { title: `No ${lg.short} ${current}`, rows: now },
-  { title: "Outros clubes que já disputaram", rows: others },
+  { title: `Na Série A em ${current}`, rows: rows.filter((r) => r.now) },
+  { title: "Já disputaram", rows: rows.filter((r) => !r.now) },
 ];
 ---
 
-<Base title={`Times do ${lg.short}`} description={`Os ${rows.length} clubes que já disputaram o ${lg.name} e os placares de cada um.`} active="times">
-  <p class="muted">{lg.flag} {lg.name}</p>
+<Base title={`Times do ${lg.short}`} description={`Os ${rows.length} clubes que já disputaram o ${lg.name}, com as scorigamis de cada um.`} active="times">
   <h1>Times do {lg.short}</h1>
-  <p class="lede">{rows.length} clubes já jogaram o {lg.short} na base atual. Clique num clube para ver o gráfico de placares dele.</p>
+  <p class="lede">As scorigamis de cada um dos {rows.length} clubes que já jogaram o {lg.short}, com os anos da primeira e da última participação.</p>
   {
     groups.map((g) => (
       <>
         <h2>{g.title}</h2>
-        <div class="table-scroll">
-          <table class="data">
-            <thead>
-              <tr><th>Clube</th><th>UF</th><th class="n">Temporadas</th><th>Período</th><th class="n">Jogos</th></tr>
-            </thead>
-            <tbody>
-              {g.rows.map((r) => (
-                <tr>
-                  <td>
-                    <a href={href(`${liga}/time/${r.slug}`)}>{r.name}</a>
-                    {r.old.length > 0 && <span class="muted"> (antes {r.old.join(", ")})</span>}
-                  </td>
-                  <td>{r.state}</td>
-                  <td class="n">{r.seasons.length}</td>
-                  <td>{r.seasons[0] === r.seasons[r.seasons.length - 1] ? r.seasons[0] : `${r.seasons[0]}–${r.seasons[r.seasons.length - 1]}`}</td>
-                  <td class="n">{fmtInt(r.games)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul class="team-list">
+          {g.rows.map((r) => (
+            <li>
+              <a href={href(`${liga}/time/${r.slug}`)}>{r.name}</a>
+              <span class="years">{r.years} · {r.count} {r.count === 1 ? "temporada" : "temporadas"}</span>
+              {r.old.length > 0 && <span class="formerly">Antes: {r.old.join(", ")}</span>}
+            </li>
+          ))}
+        </ul>
       </>
     ))
   }
