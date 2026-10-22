@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import { leagues, matches } from "../lib/data";
 import { fmtInt } from "../lib/render";
+import { href } from "../lib/links";
 
 const from = matches.reduce((x, m) => Math.min(x, m.season), Infinity);
 const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
@@ -68,6 +69,6 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
     </p>
 
     <h2>Contato</h2>
-    <p>Achou um placar errado? Fale com a gente no X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a>.</p>
+    <p>Achou um placar errado? Use o formulário <a href={href("ajuste")}>Solicitar ajuste</a> ou fale com a gente no X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a>.</p>
   </div>
 </Base>

@@ -1047,3 +1047,65 @@ details.all summary {
 .theme-toggle:hover {
   color: var(--ink);
 }
+
+/* Formulário "Solicitar ajuste" */
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 34rem;
+  margin-top: 1rem;
+}
+
+.report label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.report label > span {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.report small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.report input,
+.report select,
+.report textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+}
+
+.report textarea {
+  resize: vertical;
+}
+
+.report button {
+  font: inherit;
+  font-weight: 600;
+  align-self: flex-start;
+  color: var(--bg);
+  background: var(--ink);
+  border: 0;
+  border-radius: 6px;
+  padding: 0.5rem 1.1rem;
+  cursor: pointer;
+}
+
+.report button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.report-status {
+  margin: 0;
+  color: var(--muted);
+}

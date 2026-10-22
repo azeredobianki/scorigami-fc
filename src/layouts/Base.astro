@@ -79,11 +79,18 @@ const base = previewBase(Astro.url.pathname);
     </main>
     <footer class="site">
       <p>Novas scorigamis no X: <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a></p>
-      <p><a href={href("sobre")}>Sobre, regras e fontes dos dados</a></p>
+      <p><a href={href("sobre")}>Sobre, regras e fontes dos dados</a> · <a href={href("ajuste")} id="report-link">Solicitar ajuste</a></p>
     </footer>
     <script>
       import { initTooltip } from "../scripts/tooltip";
       initTooltip();
+      // O link "Solicitar ajuste" leva a página atual junto, para dar contexto ao pedido.
+      const report = document.getElementById("report-link") as HTMLAnchorElement | null;
+      if (report && !location.pathname.includes("ajuste")) {
+        const u = new URL(report.href);
+        u.searchParams.set("pagina", location.pathname.split("/").slice(-2).join("/") + location.search);
+        report.href = u.toString();
+      }
       // Modo escuro: alterna entre claro e escuro e guarda a escolha neste navegador.
       document.getElementById("theme-toggle")?.addEventListener("click", () => {
         const root = document.documentElement;
