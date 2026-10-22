@@ -1,19 +1,24 @@
 ---
 import Base from "../../../layouts/Base.astro";
 import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues } from "../../../lib/data";
+import { league, leagueMatches, leagues, matches } from "../../../lib/data";
 import { PREVIEW } from "../../../lib/links";
-import { scoreKeys, scorePage } from "../../../lib/pages";
+import { ALL, scoreKeys, scorePage } from "../../../lib/pages";
 
+// Uma página por placar em cada liga, mais "todas" (o filtro Geral da home).
 export function getStaticPaths() {
   if (PREVIEW) return [];
-  return leagues.flatMap((l) => scoreKeys(leagueMatches(l.slug)).map((placar) => ({ params: { liga: l.slug, placar } })));
+  return [
+    ...leagues.flatMap((l) => scoreKeys(leagueMatches(l.slug)).map((placar) => ({ params: { liga: l.slug, placar } }))),
+    ...scoreKeys(matches).map((placar) => ({ params: { liga: ALL.slug, placar } })),
+  ];
 }
 
 const { liga, placar } = Astro.params as { liga: string; placar: string };
-const page = scorePage(serverCtx(liga), league(liga), leagueMatches(liga), placar);
+const all = liga === ALL.slug;
+const page = scorePage(serverCtx(liga), all ? ALL : league(liga), all ? matches : leagueMatches(liga), placar);
 ---
 
-<Base title={page.title} description={page.description} liga={liga}>
+<Base title={page.title} description={page.description} liga={all ? undefined : liga}>
   <Fragment set:html={page.html} />
 </Base>

@@ -25,6 +25,10 @@ export interface LeagueInfo {
   split?: boolean;
 }
 
+/** Pseudo-liga com todas as competições juntas (páginas de placar do filtro Geral). */
+export const ALL: LeagueInfo = { slug: "todas", name: "todas as competições", short: "todas as competições" };
+const isAll = (lg: LeagueInfo) => lg.slug === ALL.slug;
+
 export interface Page {
   title: string;
   description: string;
@@ -66,13 +70,15 @@ export function scorePage(ctx: Ctx, lg: LeagueInfo, all: Match[], key: string): 
       if (na >= 0 && nb >= 0 && nb <= na) nearby.push({ a: na, b: nb, count: cells.get(`${na}-${nb}`)?.count ?? 0 });
     }
 
-  const no = g(lg, "no", "na");
+  const no = isAll(lg) ? "em" : g(lg, "no", "na");
   const title = `Já houve ${a}–${b} ${no} ${lg.short}?`;
   const description = count
     ? `Sim: o placar ${a}–${b} aconteceu ${plural(count, "vez", "vezes")} ${no} ${lg.name}, a última em ${fmtLong(last.date)}.`
     : `Nunca: o placar ${a}–${b} ainda não aconteceu ${no} ${lg.name}.`;
   const gameLine = (m: Match) =>
-    `<a href="${seasonHref(liga, m.season)}">${fmtLong(m.date)}</a>, ${resultLine(ctx, m)} (${matchLine(ctx, m, false)})`;
+    `<a href="${seasonHref(m.league, m.season)}">${fmtLong(m.date)}</a>, ${resultLine(ctx, m)} (${matchLine(ctx, m, false)})${
+      isAll(lg) ? ` <span class="muted">· ${esc(ctx.leagueName(m.league))}</span>` : ""
+    }`;
 
   let html = `<h1>${esc(title)}</h1><p class="answer">${count ? `Sim, ${times(count)}.` : "Nunca."}</p>`;
   if (count === 1) html += `<p>A única vez: ${gameLine(first)}.</p>`;
@@ -82,7 +88,7 @@ export function scorePage(ctx: Ctx, lg: LeagueInfo, all: Match[], key: string): 
     if (a !== b) html += `<p class="muted">Vitórias do mandante: ${fmtInt(homeWins)}. Vitórias do visitante: ${fmtInt(awayWins)}.</p>`;
   }
   if (unseen) {
-    html += `<p>Seria uma scorigami. Pela média de gols ${g(lg, "do", "da")} ${esc(lg.short)}, a chance de um jogo terminar ${a}–${b} é de cerca de 1 em ${fmtInt(Math.round(1 / unseen.probability))}.</p>`;
+    html += `<p>Seria uma scorigami. Pela média de gols ${isAll(lg) ? "de" : g(lg, "do", "da")} ${esc(lg.short)}, a chance de um jogo terminar ${a}–${b} é de cerca de 1 em ${fmtInt(Math.round(1 / unseen.probability))}.</p>`;
   }
   html += `<div style="margin-top:1.5rem">${gridHtml(ctx, all, { mode: "norm", ring: new Set([key]) })}${legendHtml()}</div>`;
   html += `<h2>Placares próximos</h2><ol class="list">${nearby
@@ -95,7 +101,10 @@ export function scorePage(ctx: Ctx, lg: LeagueInfo, all: Match[], key: string): 
   if (count > 1) {
     html += `<h2>Todos os jogos${count > LIMIT ? ` <span class="muted">(os ${LIMIT} mais recentes)</span>` : ""}</h2><ol class="list">${games
       .slice(0, LIMIT)
-      .map((m) => `<li><span class="date">${fmtLong(m.date)}</span> ${matchLine(ctx, m)}${m.note ? `<span class="muted"> · ${esc(m.note)}</span>` : ""}</li>`)
+      .map((m) => {
+        const notes = [isAll(lg) ? ctx.leagueName(m.league) : "", m.note ?? ""].filter(Boolean).join(" · ");
+        return `<li><span class="date">${fmtLong(m.date)}</span> ${matchLine(ctx, m)}${notes ? `<span class="muted"> · ${esc(notes)}</span>` : ""}</li>`;
+      })
       .join("")}</ol>`;
   }
   return { title, description, html };

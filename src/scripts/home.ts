@@ -55,7 +55,7 @@ export async function initHome() {
     const shown = inLeague.filter(keep);
     // Scorigami é sempre medida na liga inteira; o recorte só filtra a lista.
     const recent = scorigamis(inLeague, mode, !liga).filter(keep).slice(-5).reverse();
-    const ctx = data.ctx(liga || timeLeague || data.leagues[0].slug);
+    const ctx = data.ctx(liga || timeLeague || "todas");
 
     $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> / ${fmtInt(data.matches.length)} jogos`;
     paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague), color });
@@ -65,7 +65,7 @@ export async function initHome() {
     const lg = data.leagues.find((l) => l.slug === liga);
     $("recent-title").textContent = `Últimas scorigamis ${lg ? `${g(lg, "no", "na")} ${lg.short}` : "em todas as competições"}`;
     $("recent").innerHTML = scorigamiListHtml(ctx, recent, mode);
-    $("all-scorigamis").setAttribute("href", href(`${ctx.linkLeague}/scorigamis`));
+    $("all-scorigamis").setAttribute("href", href(liga ? `${liga}/scorigamis` : "scorigamis"));
     $("top").innerHTML = topScoresHtml(ctx, buildCells(shown, mode));
     $("highlights").innerHTML = highlightsHtml(ctx, shown, inLeague.filter(inEra));
 

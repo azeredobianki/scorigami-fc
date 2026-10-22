@@ -11,12 +11,14 @@ interface Props {
   liga?: string;
   /** Mostra abas para trocar de liga na mesma seção (ex.: "scorigamis"). */
   switchTo?: string;
+  /** Página "Geral" (todas as competições) da seção de abas. */
+  geral?: boolean;
 }
-const { title, description, active, switchTo } = Astro.props;
+const { title, description, active, switchTo, geral } = Astro.props;
 const liga = Astro.props.liga ?? leagues[0].slug;
 const nav = [
   { id: "grafico", label: "Gráfico", href: href("") },
-  { id: "scorigamis", label: "Scorigamis", href: href(`${liga}/scorigamis`) },
+  { id: "scorigamis", label: "Scorigamis", href: href(Astro.props.liga ? `${liga}/scorigamis` : "scorigamis") },
   { id: "times", label: "Times", href: href(`${liga}/times`) },
   { id: "timelapse", label: "Time-lapse", href: href("timelapse") },
 ];
@@ -56,8 +58,11 @@ const base = previewBase(Astro.url.pathname);
       {
         switchTo && leagues.length > 1 && (
           <nav class="league-tabs" aria-label="Competição">
+            {switchTo === "scorigamis" && (
+              <a href={href("scorigamis")} aria-current={geral ? "page" : undefined}>Geral</a>
+            )}
             {leagues.map((l) => (
-              <a href={href(`${l.slug}/${switchTo}`)} aria-current={l.slug === liga ? "page" : undefined}>{l.short}</a>
+              <a href={href(`${l.slug}/${switchTo}`)} aria-current={!geral && l.slug === liga ? "page" : undefined}>{l.short}</a>
             ))}
           </nav>
         )

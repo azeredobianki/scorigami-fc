@@ -630,7 +630,7 @@ caption {
   margin-top: 1rem;
 }
 
-.seasons a {
+.seasons > * {
   flex: 1;
   min-width: 1px;
   background: var(--l5);

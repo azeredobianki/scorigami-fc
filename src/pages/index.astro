@@ -7,7 +7,7 @@ import { eras } from "../lib/eras";
 import { href } from "../lib/links";
 import { fmtInt, fmtLong, gridHtml, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
 
-const ctx = serverCtx();
+const ctx = serverCtx("todas");
 const europe = (() => {
   const xs = leagues.filter((l) => l.slug !== "brasileirao" && l.slug !== "mls").map((l) => (l.slug === "premier-league" ? `${l.short} (desde ${l.since})` : l.short));
   return xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : xs[0];
@@ -84,7 +84,7 @@ const clubGroups = leagues.map((l) => {
 
   <h2 id="recent-title">Últimas scorigamis em todas as competições</h2>
   <div id="recent" set:html={scorigamiListHtml(ctx, recent)} />
-  <a class="more" id="all-scorigamis" href={href(`${leagues[0].slug}/scorigamis`)}>Todas as scorigamis, recentes e por temporada →</a>
+  <a class="more" id="all-scorigamis" href={href("scorigamis")}>Todas as scorigamis, recentes e por temporada →</a>
 
   <h2>Destaques</h2>
   <div id="highlights" set:html={highlightsHtml(ctx, matches)} />
