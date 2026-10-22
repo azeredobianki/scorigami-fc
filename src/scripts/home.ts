@@ -1,87 +1,155 @@
-// Filtros da home: competição, time, era e tipo de gráfico. O estado fica na URL
-// (?liga=&time=&era=&mando=1) para que um recorte possa ser compartilhado.
+// Filtros da home: competições, times e eras (cada um com várias escolhas),
+// tipo de gráfico e cor. O estado fica na URL (?liga=a,b&time=x&era=y&mando=1&cor=first)
+// para que um recorte possa ser compartilhado.
 import { buildCells, g, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
 import { eras, type Era } from "../lib/eras";
-import { fmtInt, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
+import { esc, fmtInt, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
 import { href } from "../lib/links";
 import { loadData } from "./client-data";
 import { paintGrid } from "./paint";
+
+type Color = "first" | "freq";
+
+const joinPt = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : xs[0] ?? "");
 
 export async function initHome() {
   const form = document.getElementById("filters") as HTMLFormElement;
   const buttons = [...form.querySelectorAll<HTMLButtonElement>(".switch button[data-mode]")];
   const colorButtons = [...form.querySelectorAll<HTMLButtonElement>(".switch button[data-color]")];
   const $ = (id: string) => document.getElementById(id)!;
-  const select = (name: string) => form.elements.namedItem(name) as HTMLSelectElement;
+  const boxes = (name: string) => [...form.querySelectorAll<HTMLInputElement>(`input[type=checkbox][name="${name}"]`)];
+  const checked = (name: string) => boxes(name).filter((b) => b.checked && !b.closest("[hidden]")).map((b) => b.value);
+  const menu = (name: string) => form.querySelector<HTMLDetailsElement>(`details[data-name="${name}"]`)!;
 
   const params = new URLSearchParams(location.search);
-  select("liga").value = params.get("liga") ?? "";
-  select("time").value = params.get("time") ?? "";
-  let wantedEra = params.get("era");
+  const fromUrl = (k: string) => new Set((params.get(k) ?? "").split(",").filter(Boolean));
+  const wanted = { liga: fromUrl("liga"), time: fromUrl("time") };
+  let wantedEras: Set<string> | null = fromUrl("era");
+  boxes("liga").forEach((b) => (b.checked = wanted.liga.has(b.value)));
+  boxes("time").forEach((b) => (b.checked = wanted.time.has(b.value)));
   let mode: Mode = params.get("mando") ? "mando" : "norm";
-  let color: "first" | "freq" = params.get("cor") === "freq" ? "freq" : "first";
-  buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  let color: Color = params.get("cor") === "first" ? "first" : "freq";
+
+  // Menus: fecham ao clicar fora, um de cada vez; busca de times; botão Limpar.
+  const menus = [...form.querySelectorAll<HTMLDetailsElement>("details.multi")];
+  menus.forEach((d) =>
+    d.addEventListener("toggle", () => {
+      if (d.open) menus.forEach((o) => o !== d && (o.open = false));
+    }),
+  );
+  document.addEventListener("click", (e) => {
+    if (!(e.target as Element).closest("details.multi")) menus.forEach((d) => (d.open = false));
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") menus.forEach((d) => (d.open = false));
+  });
+  const find = form.querySelector<HTMLInputElement>("input.find")!;
+  find.addEventListener("input", () => {
+    const q = find.value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    menu("time")
+      .querySelectorAll<HTMLLabelElement>("label")
+      .forEach((l) => (l.style.display = l.textContent!.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes(q) ? "" : "none"));
+    // Esconde o nome da liga quando nenhum time dela bate com a busca.
+    menu("time")
+      .querySelectorAll<HTMLFieldSetElement>("fieldset")
+      .forEach((f) => (f.style.display = [...f.querySelectorAll<HTMLLabelElement>("label")].some((l) => l.style.display !== "none") ? "" : "none"));
+  });
+  form.querySelectorAll<HTMLButtonElement>("button.clear").forEach((b) =>
+    b.addEventListener("click", () => {
+      b.closest("details")!.querySelectorAll<HTMLInputElement>("input[type=checkbox]").forEach((x) => (x.checked = false));
+      update(true);
+    }),
+  );
 
   const data = await loadData();
-  // As eras dependem da liga: cada uma tem as suas fases.
-  let eraLiga: string | null = null;
+  const leagueOf = new Map(data.leagues.map((l) => [l.slug, l]));
+  const clubLeague = new Map<string, string>();
+  for (const m of data.matches) clubLeague.set(m.home, m.league);
+
+  // As eras dependem das ligas: com uma só, entram as fases dela; com várias, só as décadas.
+  let eraKey: string | null = null;
   let eraList: Era[] = [];
-  function syncEras(liga: string, pool: Match[]) {
-    if (liga === eraLiga) return;
-    eraLiga = liga;
-    const wanted = wantedEra ?? select("era").value;
-    wantedEra = null;
-    eraList = eras([...new Set(pool.map((m) => m.season))], liga);
-    select("era").innerHTML = eraList.map((e) => `<option value="${e.id}">${e.label}</option>`).join("");
-    select("era").value = eraList.some((e) => e.id === wanted) ? wanted : eraList[0].id;
+  function syncEras(ligas: string[], pool: Match[]) {
+    const key = ligas.join(",");
+    if (key === eraKey) return;
+    eraKey = key;
+    const keep = wantedEras ?? new Set(checked("era"));
+    wantedEras = null;
+    eraList = eras([...new Set(pool.map((m) => m.season))], ligas.length === 1 ? ligas[0] : "").slice(1);
+    $("era-menu").innerHTML =
+      eraList
+        .map((e) => `<label><input type="checkbox" name="era" value="${e.id}"${keep.has(e.id) ? " checked" : ""} /> ${esc(e.label)}</label>`)
+        .join("") + `<button type="button" class="clear">Limpar</button>`;
+    $("era-menu")
+      .querySelector("button.clear")!
+      .addEventListener("click", () => {
+        boxes("era").forEach((x) => (x.checked = false));
+        update(true);
+      });
+  }
+
+  function summary(name: string, labels: string[], all: string) {
+    const el = menu(name).querySelector(".sum")!;
+    el.textContent = !labels.length ? all : labels.length <= 2 ? labels.join(", ") : `${labels.length} selecionados`;
   }
 
   function update(push: boolean) {
-    const liga = select("liga").value;
-    // Com uma liga escolhida, o filtro de time mostra só os times dela.
-    form.querySelectorAll<HTMLOptGroupElement>("optgroup").forEach((g) => (g.hidden = !!liga && g.dataset.league !== liga));
-    const picked = select("time").selectedOptions[0]?.parentElement as HTMLOptGroupElement | null;
-    if (liga && picked?.dataset.league && picked.dataset.league !== liga) select("time").value = "";
-    const time = select("time").value;
-    const timeLeague = (select("time").selectedOptions[0]?.parentElement as HTMLElement | null)?.dataset.league;
-    const inLeague = liga ? data.matches.filter((m) => m.league === liga) : data.matches;
-    syncEras(liga, inLeague);
-    const era = eraList.find((e) => e.id === select("era").value) ?? eraList[0];
+    const ligas = checked("liga");
+    const ligaSet = new Set(ligas);
+    // Com ligas escolhidas, o filtro de times mostra só os times delas.
+    menu("time")
+      .querySelectorAll<HTMLFieldSetElement>("fieldset")
+      .forEach((f) => (f.hidden = !!ligas.length && !ligaSet.has(f.dataset.league!)));
+    const times = new Set(checked("time"));
+    const inLeague = ligas.length ? data.matches.filter((m) => ligaSet.has(m.league)) : data.matches;
+    syncEras(ligas, inLeague);
+    const picked = eraList.filter((e) => checked("era").includes(e.id));
+
     buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
     colorButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.color === color)));
+    summary("liga", ligas.map((s) => leagueOf.get(s)!.short), "Geral: todas");
+    summary("time", [...times].map((s) => data.ctx("todas").clubName(s)), "Todos");
+    summary("era", picked.map((e) => e.label.replace(/ \(.*\)$/, "")), "Todas");
 
-    const inEra = (m: Match) => m.season >= era.from && m.season <= era.to;
-    const keep = (m: Match) => (!time || m.home === time || m.away === time) && inEra(m);
+    const inEra = (m: Match) => !picked.length || picked.some((e) => m.season >= e.from && m.season <= e.to);
+    const keep = (m: Match) => (!times.size || times.has(m.home) || times.has(m.away)) && inEra(m);
     const shown = inLeague.filter(keep);
-    // Scorigami é sempre medida na liga inteira; o recorte só filtra a lista.
-    const recent = scorigamis(inLeague, mode, !liga).filter(keep).slice(-5).reverse();
-    const ctx = data.ctx(liga || timeLeague || "todas");
+    // Com uma liga, scorigami é inédito naquela liga; com várias (ou Geral), inédito em todas as escolhidas juntas.
+    const one = ligas.length === 1 ? ligas[0] : "";
+    const recent = scorigamis(inLeague, mode, !one).filter(keep).slice(-5).reverse();
+    const timeLeagues = new Set([...times].map((t) => clubLeague.get(t)));
+    const ctx = data.ctx(one || (timeLeagues.size === 1 && !ligas.length ? [...timeLeagues][0]! : "todas"));
 
     $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> / ${fmtInt(data.matches.length)} jogos`;
     paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague), color });
     const [y0, y1] = seasonRange(shown);
-    const yl = (s: number) => (liga ? ctx.season(liga, s) : String(s));
+    const yl = (s: number) => (one ? ctx.season(one, s) : String(s));
     $("legend").innerHTML = shown.length ? legendHtml(color === "first" ? [yl(y0), yl(y1)] : undefined) : "";
-    const lg = data.leagues.find((l) => l.slug === liga);
-    $("recent-title").textContent = `Últimas scorigamis ${lg ? `${g(lg, "no", "na")} ${lg.short}` : "em todas as competições"}`;
+    const lg = leagueOf.get(one);
+    $("recent-title").textContent = `Últimas scorigamis ${
+      lg ? `${g(lg, "no", "na")} ${lg.short}` : ligas.length ? `em ${joinPt(ligas.map((s) => leagueOf.get(s)!.short))}` : "em todas as competições"
+    }`;
     $("recent").innerHTML = scorigamiListHtml(ctx, recent, mode);
-    $("all-scorigamis").setAttribute("href", href(liga ? `${liga}/scorigamis` : "scorigamis"));
+    $("all-scorigamis").setAttribute("href", href(one ? `${one}/scorigamis` : "scorigamis"));
     $("top").innerHTML = topScoresHtml(ctx, buildCells(shown, mode));
     $("highlights").innerHTML = highlightsHtml(ctx, shown, inLeague.filter(inEra));
 
     if (push) {
       const q = new URLSearchParams();
-      if (liga) q.set("liga", liga);
-      if (time) q.set("time", time);
-      if (era.id !== eraList[0].id) q.set("era", era.id);
+      if (ligas.length) q.set("liga", ligas.join(","));
+      if (times.size) q.set("time", [...times].join(","));
+      if (picked.length) q.set("era", picked.map((e) => e.id).join(","));
       if (mode === "mando") q.set("mando", "1");
-      if (color === "freq") q.set("cor", "freq");
+      if (color === "first") q.set("cor", "first");
       const qs = q.toString();
-      history.replaceState(null, "", qs ? `?${qs}` : location.pathname);
+      history.replaceState(null, "", qs ? `?${qs.replace(/%2C/g, ",")}` : location.pathname);
     }
   }
 
-  form.addEventListener("change", () => update(true));
+  form.addEventListener("change", (e) => {
+    if ((e.target as Element).matches("input.find")) return;
+    update(true);
+  });
   buttons.forEach((b) =>
     b.addEventListener("click", () => {
       mode = b.dataset.mode as Mode;
@@ -90,7 +158,7 @@ export async function initHome() {
   );
   colorButtons.forEach((b) =>
     b.addEventListener("click", () => {
-      color = b.dataset.color as "first" | "freq";
+      color = b.dataset.color as Color;
       update(true);
     }),
   );
