@@ -91,6 +91,8 @@ export interface GridOptions {
   ring?: Set<string>;
   /** Rótulos dos eixos, quando o grid não é de mandante × visitante. */
   labels?: [string, string];
+  /** Cor das casas: quantas vezes o placar aconteceu (padrão) ou quando aconteceu pela primeira vez. */
+  color?: "freq" | "first";
 }
 
 export interface CellState {
@@ -106,7 +108,11 @@ export function gridCells(ctx: Ctx, matches: Match[], opt: GridOptions): { size:
   const { mode } = opt;
   const cells = buildCells(matches, mode);
   const size = opt.size ?? gridSize(matches);
-  const max = Math.max(1, ...[...cells.values()].map((c) => c.count));
+  const max = [...cells.values()].reduce((x, c) => Math.max(x, c.count), 1);
+  // No modo "primeira vez", a cor vai do mais antigo (claro) ao mais recente (escuro).
+  const byFirst = opt.color === "first";
+  const [y0, y1] = seasonRange(matches);
+  const firstLevel = (c: Cell) => 1 + Math.round(((c.first.season - y0) / Math.max(1, y1 - y0)) * 7);
   const out: (CellState | null)[] = [];
   for (let a = size; a >= 0; a--) {
     for (let b = 0; b <= size; b++) {
@@ -119,9 +125,11 @@ export function gridCells(ctx: Ctx, matches: Match[], opt: GridOptions): { size:
       const ring = opt.ring?.has(key) ? " ring" : "";
       out.push({
         key,
-        cls: `cell l${level(c?.count ?? 0, max)}${ring}`,
+        cls: `cell l${c ? (byFirst ? firstLevel(c) : level(c.count, max)) : 0}${ring}`,
         count: c?.count ?? 0,
-        tip: c
+        tip: c && byFirst
+          ? `Primeira vez: ${fmtDate(c.first.date)}, ${ctx.clubName(c.first.home, c.first.season)} ${c.first.hg}–${c.first.ag} ${ctx.clubName(c.first.away, c.first.season)} · ${times(c.count)}`
+          : c
           ? `${times(c.count)} · última: ${fmtDate(c.last.date)}, ${ctx.clubName(c.last.home, c.last.season)} ${c.last.hg}–${c.last.ag} ${ctx.clubName(c.last.away, c.last.season)}`
           : "Nunca aconteceu",
         href: scoreHref(ctx, a, b),
@@ -150,10 +158,19 @@ export function gridHtml(ctx: Ctx, matches: Match[], opt: GridOptions): string {
   return html;
 }
 
-export function legendHtml(): string {
-  let html = `<div class="legend" aria-hidden="true"><span class="sw l0"></span><span>Nunca</span><span class="gap"></span><span>Raro</span>`;
+/** Primeira e última temporada de uma lista de jogos. */
+export function seasonRange(matches: Match[]): [number, number] {
+  let a = Infinity, b = -Infinity;
+  for (const m of matches) (a = Math.min(a, m.season)), (b = Math.max(b, m.season));
+  return [a, b];
+}
+
+/** Legenda de cores. Com `years`, a escala é a da primeira vez (do ano mais antigo ao mais recente). */
+export function legendHtml(years?: [string, string]): string {
+  const [from, to] = years ?? ["Raro", "Comum"];
+  let html = `<div class="legend" aria-hidden="true"><span class="sw l0"></span><span>Nunca</span><span class="gap"></span>${years ? "<span>Primeira vez:</span>" : ""}<span>${from}</span>`;
   for (let i = 1; i <= 8; i++) html += `<span class="sw l${i}"></span>`;
-  return html + `<span>Comum</span></div>`;
+  return html + `<span>${to}</span></div>`;
 }
 
 // --- Listas -----------------------------------------------------------------

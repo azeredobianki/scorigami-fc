@@ -53,15 +53,17 @@ export function buildCells(matches: Match[], mode: Mode = "norm"): Map<string, C
 }
 
 /**
- * Jogos que foram scorigami: a primeira vez que o placar aconteceu na liga.
+ * Jogos que foram scorigami: a primeira vez que o placar aconteceu na liga
+ * (ou, com `global`, em qualquer competição).
  * O conjunto de referência é sempre a liga inteira, para que um filtro por
  * time ou por era não "invente" scorigamis.
  */
-export function scorigamis(matches: Match[], mode: Mode = "norm"): Match[] {
+export function scorigamis(matches: Match[], mode: Mode = "norm", global = false): Match[] {
   const seen = new Set<string>();
   const out: Match[] = [];
   for (const m of matches) {
-    const k = `${m.league}|${scoreKey(m, mode)}`;
+    // global: inédito em todas as competições juntas; senão, dentro da liga.
+    const k = global ? scoreKey(m, mode) : `${m.league}|${scoreKey(m, mode)}`;
     if (!seen.has(k)) {
       seen.add(k);
       out.push(m);

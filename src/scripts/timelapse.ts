@@ -11,7 +11,7 @@ interface Milestone {
   text: string;
 }
 
-const LIGHT = [24, 74]; // luminosidade: mais escura = mais antiga
+const LIGHT = [74, 24]; // luminosidade: mais clara = mais antiga, mais escura = mais recente
 
 export async function initTimelapse() {
   const data = await loadData();

@@ -1,15 +1,16 @@
 // Filtros da home: competição, time, era e tipo de gráfico. O estado fica na URL
 // (?liga=&time=&era=&mando=1) para que um recorte possa ser compartilhado.
-import { buildCells, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
+import { buildCells, g, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
 import { eras, type Era } from "../lib/eras";
-import { fmtInt, highlightsHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
+import { fmtInt, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
 import { href } from "../lib/links";
 import { loadData } from "./client-data";
 import { paintGrid } from "./paint";
 
 export async function initHome() {
   const form = document.getElementById("filters") as HTMLFormElement;
-  const buttons = [...form.querySelectorAll<HTMLButtonElement>(".switch button")];
+  const buttons = [...form.querySelectorAll<HTMLButtonElement>(".switch button[data-mode]")];
+  const colorButtons = [...form.querySelectorAll<HTMLButtonElement>(".switch button[data-color]")];
   const $ = (id: string) => document.getElementById(id)!;
   const select = (name: string) => form.elements.namedItem(name) as HTMLSelectElement;
 
@@ -18,6 +19,7 @@ export async function initHome() {
   select("time").value = params.get("time") ?? "";
   let wantedEra = params.get("era");
   let mode: Mode = params.get("mando") ? "mando" : "norm";
+  let color: "first" | "freq" = params.get("cor") === "freq" ? "freq" : "first";
   buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
 
   const data = await loadData();
@@ -46,16 +48,22 @@ export async function initHome() {
     syncEras(liga, inLeague);
     const era = eraList.find((e) => e.id === select("era").value) ?? eraList[0];
     buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+    colorButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.color === color)));
 
     const inEra = (m: Match) => m.season >= era.from && m.season <= era.to;
     const keep = (m: Match) => (!time || m.home === time || m.away === time) && inEra(m);
     const shown = inLeague.filter(keep);
     // Scorigami é sempre medida na liga inteira; o recorte só filtra a lista.
-    const recent = scorigamis(inLeague, mode).filter(keep).slice(-5).reverse();
+    const recent = scorigamis(inLeague, mode, !liga).filter(keep).slice(-5).reverse();
     const ctx = data.ctx(liga || timeLeague || data.leagues[0].slug);
 
     $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> / ${fmtInt(data.matches.length)} jogos`;
-    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague) });
+    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague), color });
+    const [y0, y1] = seasonRange(shown);
+    const yl = (s: number) => (liga ? ctx.season(liga, s) : String(s));
+    $("legend").innerHTML = shown.length ? legendHtml(color === "first" ? [yl(y0), yl(y1)] : undefined) : "";
+    const lg = data.leagues.find((l) => l.slug === liga);
+    $("recent-title").textContent = `Últimas scorigamis ${lg ? `${g(lg, "no", "na")} ${lg.short}` : "em todas as competições"}`;
     $("recent").innerHTML = scorigamiListHtml(ctx, recent, mode);
     $("all-scorigamis").setAttribute("href", href(`${ctx.linkLeague}/scorigamis`));
     $("top").innerHTML = topScoresHtml(ctx, buildCells(shown, mode));
@@ -67,6 +75,7 @@ export async function initHome() {
       if (time) q.set("time", time);
       if (era.id !== eraList[0].id) q.set("era", era.id);
       if (mode === "mando") q.set("mando", "1");
+      if (color === "freq") q.set("cor", "freq");
       const qs = q.toString();
       history.replaceState(null, "", qs ? `?${qs}` : location.pathname);
     }
@@ -76,6 +85,12 @@ export async function initHome() {
   buttons.forEach((b) =>
     b.addEventListener("click", () => {
       mode = b.dataset.mode as Mode;
+      update(true);
+    }),
+  );
+  colorButtons.forEach((b) =>
+    b.addEventListener("click", () => {
+      color = b.dataset.color as "first" | "freq";
       update(true);
     }),
   );

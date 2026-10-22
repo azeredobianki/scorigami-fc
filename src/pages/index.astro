@@ -5,7 +5,7 @@ import { serverCtx } from "../lib/ctx";
 import { clubs, lastDate, leagues, matches } from "../lib/data";
 import { eras } from "../lib/eras";
 import { href } from "../lib/links";
-import { fmtInt, fmtLong, gridHtml, highlightsHtml, legendHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
+import { fmtInt, fmtLong, gridHtml, highlightsHtml, legendHtml, scorigamiListHtml, seasonRange, topScoresHtml } from "../lib/render";
 
 const ctx = serverCtx();
 const europe = (() => {
@@ -13,7 +13,8 @@ const europe = (() => {
   return xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs[xs.length - 1]}` : xs[0];
 })();
 const cells = buildCells(matches, "norm");
-const recent = scorigamis(matches, "norm").slice(-5).reverse();
+const recent = scorigamis(matches, "norm", true).slice(-5).reverse();
+const [y0, y1] = seasonRange(matches);
 const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
 const eraList = eras(seasons);
 // Times agrupados por liga no filtro.
@@ -30,7 +31,7 @@ const clubGroups = leagues.map((l) => {
 >
   <form class="bar" id="filters" onsubmit="return false" aria-label="Filtros do gráfico">
     <select name="liga" aria-label="Competição">
-      <option value="">Todas as competições</option>
+      <option value="">Geral: todas as competições</option>
       {leagues.map((l) => <option value={l.slug}>{l.short}</option>)}
     </select>
     <select name="time" aria-label="Time">
@@ -48,6 +49,10 @@ const clubGroups = leagues.map((l) => {
       <button type="button" data-mode="norm" aria-pressed="true">Maior × menor</button>
       <button type="button" data-mode="mando" aria-pressed="false">Mandante × visitante</button>
     </div>
+    <div class="switch" role="group" aria-label="Cor das casas">
+      <button type="button" data-color="first" aria-pressed="true">Primeira vez</button>
+      <button type="button" data-color="freq" aria-pressed="false">Frequência</button>
+    </div>
   </form>
 
   <div class="status">
@@ -55,13 +60,14 @@ const clubGroups = leagues.map((l) => {
     <span>Último jogo: {fmtLong(lastDate)}</span>
   </div>
 
-  <div id="grid" set:html={gridHtml(ctx, matches, { mode: "norm" })} />
-  <Fragment set:html={legendHtml()} />
+  <div id="grid" set:html={gridHtml(ctx, matches, { mode: "norm", color: "first" })} />
+  <div id="legend" set:html={legendHtml([String(y0), String(y1)])} />
 
   <h2>O que é Scorigami?</h2>
   <p>
     Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e das
-    principais ligas europeias: {europe}. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes. O site acompanha cada placar
+    principais ligas europeias: {europe}. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes: no filtro Geral, em nenhuma das competições; com uma
+    liga escolhida, naquela liga. O site acompanha cada placar
     novo e quantas vezes cada um já se repetiu. A ideia vem do <a href="https://nflscorigami.com/">NFL Scorigami</a>, criado
     por Jon Bois.
   </p>
@@ -69,13 +75,14 @@ const clubGroups = leagues.map((l) => {
   <h2>Como ler este gráfico?</h2>
   <p>
     O placar do vencedor fica no eixo vertical, à esquerda, e o do perdedor no eixo horizontal, embaixo. Empates ficam na
-    diagonal. A cor mostra quantas vezes o placar aconteceu, e as casas em branco são placares que nunca aconteceram. A
+    diagonal. Na cor "Primeira vez", quanto mais escura a casa, mais recente foi a primeira vez daquele placar; na cor
+    "Frequência", quanto mais escura, mais vezes ele aconteceu. As casas em branco são placares que nunca aconteceram. A
     metade de cima à direita fica vazia porque o perdedor não pode ter feito mais gols que o vencedor. No modo
     mandante × visitante, 3–1 e 1–3 viram casas diferentes. Passe o mouse para ver os números e clique numa casa para ver
     os jogos.
   </p>
 
-  <h2>Últimas scorigamis</h2>
+  <h2 id="recent-title">Últimas scorigamis em todas as competições</h2>
   <div id="recent" set:html={scorigamiListHtml(ctx, recent)} />
   <a class="more" id="all-scorigamis" href={href(`${leagues[0].slug}/scorigamis`)}>Todas as scorigamis, recentes e por temporada →</a>
 
