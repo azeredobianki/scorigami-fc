@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import { biggestRouts, gridSize, hi, lo, scorigamis } from "../lib/core";
 import { serverCtx } from "../lib/ctx";
-import { clubName, leagueMatches, leagues, seasonOf } from "../lib/data";
+import { clubName, leagueMatches, matches, leagues, seasonOf } from "../lib/data";
 import { href } from "../lib/links";
 import { gridHtml } from "../lib/render";
 import { t, type Lang } from "../lib/i18n";
@@ -138,10 +138,10 @@ milestones.push(
 );
 milestones.sort((a, b) => a.season - b.season);
 
-const first = leagues[0].slug;
-const seasons = [...new Set(leagueMatches(first).map((m) => m.season))].sort((a, b) => a - b);
-const S = (s: number) => seasonOf(first, s);
-const ctx = serverCtx(first, lang);
+// Abre em "Todas as competições"; o visitante escolhe uma liga no filtro.
+const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
+const S = (s: number) => String(s);
+const ctx = serverCtx(undefined, lang);
 ---
 
 <Base
@@ -159,8 +159,8 @@ const ctx = serverCtx(first, lang);
         <div class="field">
           <span class="field-label" id="tl-lbl-liga">{T.competition}</span>
           <select name="liga" aria-labelledby="tl-lbl-liga">
-            {leagues.map((l) => <option value={l.slug} selected={l.slug === first}>{l.short}</option>)}
-            <option value="">{T.tlAll}</option>
+            <option value="" selected>{T.tlAll}</option>
+            {leagues.map((l) => <option value={l.slug}>{l.short}</option>)}
           </select>
         </div>
       )
@@ -180,7 +180,7 @@ const ctx = serverCtx(first, lang);
   </div>
   <p class="tl-note" id="tl-note" aria-live="polite"></p>
 
-  <div id="tl-grid" set:html={gridHtml(ctx, [], { mode: "norm", size: gridSize(leagueMatches(first)) })} />
+  <div id="tl-grid" set:html={gridHtml(ctx, [], { mode: "norm", size: gridSize(matches) })} />
 
   <div class="player">
     <button type="button" id="tl-play" aria-label={T.tlPlay}>▶</button>
@@ -196,7 +196,7 @@ const ctx = serverCtx(first, lang);
   <h2>{T.tlMilestones}</h2>
   <ol class="milestones">
     {milestones.map((m) => (
-      <li data-league={m.league} hidden={m.league !== first}>
+      <li data-league={m.league}>
         <button type="button" data-season={m.season} data-league={m.league}>{seasonOf(m.league, m.season)}</button>
         <div><h3>{m.title}</h3><p>{m.text}</p></div>
       </li>
