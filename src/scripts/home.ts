@@ -122,7 +122,8 @@ export async function initHome() {
     const ctx = data.ctx(one || (timeLeagues.size === 1 && !ligas.length ? [...timeLeagues][0]! : "todas"));
 
     $("counter").innerHTML = T.showing(shown.length, data.matches.length);
-    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague), color });
+    // O grid encolhe com o filtro: vai até uma linha acima do maior número de gols do recorte.
+    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(shown), color });
     const [y0, y1] = seasonRange(shown);
     const yl = (s: number) => (one ? ctx.season(one, s) : String(s));
     $("legend").innerHTML = shown.length ? legendHtml(ctx, color === "first" ? [yl(y0), yl(y1)] : undefined) : "";

@@ -72,11 +72,11 @@ export function scorigamis(matches: Match[], mode: Mode = "norm", global = false
   return out;
 }
 
-/** Maior placar a mostrar no grid: pelo menos 7 e sempre cobre o maior placar visto. */
+/** Maior placar a mostrar no grid: uma linha acima do maior número de gols do recorte, com no mínimo 5. */
 export function gridSize(matches: Match[]): number {
-  let max = 7;
+  let max = 0;
   for (const m of matches) max = Math.max(max, m.hg, m.ag);
-  return max;
+  return Math.max(5, max + 1);
 }
 
 // --- Destaques -------------------------------------------------------------
