@@ -1,7 +1,7 @@
 // Leitura dos dados no build. Só roda no Node.
 import fs from "node:fs";
 import path from "node:path";
-import { byDate, type Match } from "./core";
+import { byDate, seasonLabel, type Match } from "./core";
 
 const DATA = path.resolve(process.cwd(), "data");
 
@@ -12,7 +12,14 @@ export interface League {
   country: string;
   flag: string;
   since: number;
+  /** Temporada que vira o ano, mostrada como "2019/20". */
+  split?: boolean;
+  /** Nome feminino ("da Premier League"). */
+  fem?: boolean;
 }
+
+/** Escolhe a forma masculina ou feminina conforme a liga: g(lg, "do", "da"). */
+export const g = (lg: { fem?: boolean }, masc: string, fem: string) => (lg.fem ? fem : masc);
 
 export interface Club {
   slug: string;
@@ -71,6 +78,8 @@ export function league(slug: string): League {
   if (!l) throw new Error(`Liga desconhecida: ${slug}`);
   return l;
 }
+
+export const seasonOf = (liga: string, season: number) => seasonLabel(season, league(liga).split);
 
 /** Jogos de uma liga: data/matches/<liga>.csv mais arquivos extras como <liga>-historico.csv. */
 function loadLeague(slug: string): Match[] {

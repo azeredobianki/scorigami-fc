@@ -2,8 +2,8 @@
 import Base from "../../../layouts/Base.astro";
 import { scorigamis } from "../../../lib/core";
 import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues } from "../../../lib/data";
-import { href } from "../../../lib/links";
+import { league, leagueMatches, leagues, seasonOf, g } from "../../../lib/data";
+import { seasonHref } from "../../../lib/links";
 import { plural, scorigamiListHtml } from "../../../lib/render";
 
 export function getStaticPaths() {
@@ -23,13 +23,17 @@ const latest = perSeason[perSeason.length - 1];
 const lastNew = list[list.length - 1];
 const decades: number[] = [];
 for (let d = Math.ceil(seasons[0] / 10) * 10; d <= seasons[seasons.length - 1]; d += 10) decades.push(d);
-const pos = (s: number) => ((seasons.indexOf(s) + 0.5) / seasons.length) * 100;
+const S = (s: number) => seasonOf(liga, s);
+// Posição da década na faixa de barras (anos sem campeonato, como nas guerras, contam a temporada seguinte).
+const pos = (d: number) => ((seasons.findIndex((s) => s >= d) + 0.5) / seasons.length) * 100;
 ---
 
 <Base
-  title={`Scorigamis do ${lg.short}`}
-  description={`Os ${list.length} placares inéditos da história do ${lg.name}, do mais recente ao primeiro, temporada por temporada.`}
+  title={`Scorigamis ${g(lg, "do", "da")} ${lg.short}`}
+  description={`Os ${list.length} placares inéditos da história ${g(lg, "do", "da")} ${lg.name}, do mais recente ao primeiro, temporada por temporada.`}
   active="scorigamis"
+  liga={liga}
+  switchTo="scorigamis"
 >
   <h1>Scorigamis</h1>
 
@@ -38,18 +42,18 @@ const pos = (s: number) => ((seasons.indexOf(s) + 0.5) / seasons.length) * 100;
 
   <h2>Por temporada</h2>
   <p>
-    Placares novos a cada temporada. As primeiras edições preencheram o gráfico depressa; {top.season} teve mais, com{" "}
-    {top.count}. A temporada atual, {latest.season}, tem {latest.count}. A última scorigami do {lg.short} foi em{" "}
-    {lastNew.season}.
+    Placares novos a cada temporada. As primeiras edições preencheram o gráfico depressa; {S(top.season)} teve mais, com{" "}
+    {top.count}. A temporada atual, {S(latest.season)}, tem {latest.count}. A última scorigami {g(lg, "do", "da")} {lg.short} foi em{" "}
+    {S(lastNew.season)}.
   </p>
   <div class="seasons" role="img" aria-label="Scorigamis por temporada">
     {perSeason.map((p) => (
       <a
-        href={href(`${liga}/scorigamis/${p.season}`)}
+        href={seasonHref(liga, p.season)}
         style={`height:${p.count ? Math.max(2, (p.count / max) * 100) : 0}%`}
-        data-k={String(p.season)}
+        data-k={S(p.season)}
         data-tip={plural(p.count, "scorigami", "scorigamis")}
-        aria-label={`${p.season}: ${plural(p.count, "scorigami", "scorigamis")}`}
+        aria-label={`${S(p.season)}: ${plural(p.count, "scorigami", "scorigamis")}`}
       />
     ))}
   </div>
@@ -59,7 +63,7 @@ const pos = (s: number) => ((seasons.indexOf(s) + 0.5) / seasons.length) * 100;
 
   <ul class="season-list">
     {[...perSeason].reverse().map((p) => (
-      <li><a href={href(`${liga}/scorigamis/${p.season}`)}>{p.season}</a> <span class="muted">{p.count}</span></li>
+      <li><a href={seasonHref(liga, p.season)}>{S(p.season)}</a> <span class="muted">{p.count}</span></li>
     ))}
   </ul>
 </Base>

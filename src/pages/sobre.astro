@@ -14,7 +14,7 @@ const to = Math.max(...seasons);
     <p>
       Scorigami é um placar final que nunca tinha acontecido antes na história de uma competição. O conceito foi criado por
       Jon Bois para a NFL e ganhou versões para outros esportes, como o <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
-      O Scorigami FC leva a ideia para o futebol, começando pelo Brasileirão.
+      O Scorigami FC leva a ideia para o futebol, começando pelo Brasileirão e pela Premier League.
     </p>
 
     <h2>O que conta como placar final</h2>
@@ -36,16 +36,25 @@ const to = Math.max(...seasons);
       Torneio Roberto Gomes Pedrosa (1967–1970) e o Campeonato Brasileiro a partir de 1971.
     </p>
 
+    <h2>O que entra na Premier League</h2>
+    <p>
+      A Premier League substituiu a First Division em 1992 como primeira divisão inglesa. O site conta as duas como uma só
+      liga, desde a primeira temporada da Football League, em 1888/89. As temporadas europeias aparecem como "2024/25" e,
+      nos endereços do site, pelo ano de início.
+    </p>
+
     <h2 id="fontes">Fontes</h2>
     <p>A base atual tem {fmtInt(matches.length)} jogos de {from} a {to}, em {leagues.length === 1 ? "uma liga" : `${leagues.length} ligas`}.</p>
     <ul>
       <li><a href="https://github.com/adaoduque/Brasileirao_Dataset">Brasileirao_Dataset</a>, de Adão Duque: Série A de 2003 a 2024.</li>
       <li><a href="https://github.com/openfootball/football.json">openfootball/football.json</a>: Série A de 2025 e 2026 (domínio público).</li>
       <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão e Brasileirão de 1959 a 2002, conferidos com o <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> de 1971 a 2002.</li>
+      <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, de James Curley: First Division e Premier League de 1888/89 a 2024/25, conferidos jogo a jogo com <a href="https://github.com/footballcsv">footballcsv</a>, openfootball e <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, e com as tabelas finais do <a href="https://www.rsssf.org/">RSSSF</a>.</li>
+      <li>openfootball/football.json: Premier League a partir de 2025/26.</li>
     </ul>
     <p>
-      O total de jogos de cada temporada é conferido antes de publicar. Ficaram de fora 44 jogos antigos sem data ou sem placar
-      de campo (W.O. e jogos abandonados). Em 371 jogos antigos o dia exato é aproximado dentro da rodada.
+      O total de jogos de cada temporada é conferido antes de publicar. No Brasileirão, ficaram de fora 44 jogos antigos sem
+      data ou sem placar de campo (W.O. e jogos abandonados), e em 371 jogos antigos o dia exato é aproximado dentro da rodada.
     </p>
 
     <h2>Contato</h2>

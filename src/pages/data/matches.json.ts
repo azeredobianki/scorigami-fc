@@ -5,7 +5,7 @@ export function GET() {
   const clubIndex = new Map(clubs.map((c, i) => [c.slug, i]));
   const leagueIndex = new Map(leagues.map((l, i) => [l.slug, i]));
   const body = {
-    leagues: leagues.map((l) => ({ slug: l.slug, name: l.short })),
+    leagues: leagues.map((l) => ({ slug: l.slug, name: l.short, split: !!l.split, fem: !!l.fem })),
     clubs: clubs.map((c) => ({ slug: c.slug, name: c.name, names: c.names })),
     // [liga, temporada, data, mandante, visitante, gols mandante, gols visitante]
     matches: matches.map((m) => [

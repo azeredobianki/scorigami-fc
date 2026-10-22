@@ -12,13 +12,16 @@ const cells = buildCells(matches, "norm");
 const recent = scorigamis(matches, "norm").slice(-5).reverse();
 const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
 const eraList = eras(seasons);
-const playing = new Set(matches.flatMap((m) => [m.home, m.away]));
-const clubOptions = clubs.filter((c) => playing.has(c.slug)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+// Times agrupados por liga no filtro.
+const clubGroups = leagues.map((l) => {
+  const playing = new Set(matches.filter((m) => m.league === l.slug).flatMap((m) => [m.home, m.away]));
+  return { league: l, clubs: clubs.filter((c) => playing.has(c.slug)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR")) };
+});
 ---
 
 <Base
   title="Scorigami FC"
-  description="Todos os placares finais da história do Brasileirão em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
+  description="Todos os placares finais da história do Brasileirão e da Premier League em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
   active="grafico"
 >
   <form class="bar" id="filters" onsubmit="return false" aria-label="Filtros do gráfico">
@@ -28,7 +31,11 @@ const clubOptions = clubs.filter((c) => playing.has(c.slug)).sort((a, b) => a.na
     </select>
     <select name="time" aria-label="Time">
       <option value="">Todos os times</option>
-      {clubOptions.map((c) => <option value={c.slug}>{c.name}</option>)}
+      {clubGroups.map((g) => (
+        <optgroup label={g.league.short} data-league={g.league.slug}>
+          {g.clubs.map((c) => <option value={c.slug}>{c.name}</option>)}
+        </optgroup>
+      ))}
     </select>
     <select name="era" aria-label="Era">
       {eraList.map((e) => <option value={e.id}>{e.label}</option>)}
@@ -49,8 +56,9 @@ const clubOptions = clubs.filter((c) => playing.has(c.slug)).sort((a, b) => a.na
 
   <h2>O que é Scorigami?</h2>
   <p>
-    Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e todos os que
-    ainda não aconteceram. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes. O site acompanha cada placar
+    Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e da Premier
+    League, contando a antiga First Division desde 1888, além de todos os que ainda não aconteceram. Escolha uma
+    competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes. O site acompanha cada placar
     novo e quantas vezes cada um já se repetiu. A ideia vem do <a href="https://nflscorigami.com/">NFL Scorigami</a>, criado
     por Jon Bois.
   </p>

@@ -858,3 +858,30 @@ details.all summary {
 .chart.by-year .cell.seen.ring {
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
+
+/* Abas de competição nas páginas de liga */
+.league-tabs {
+  display: inline-flex;
+  background: var(--soft);
+  border-radius: 6px;
+  padding: 2px;
+  margin-bottom: 1.25rem;
+}
+
+.league-tabs a {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.22rem 0.7rem;
+  border-radius: 5px;
+}
+
+.league-tabs a[aria-current="page"] {
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.milestones li[hidden] {
+  display: none;
+}

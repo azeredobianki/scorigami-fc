@@ -2,11 +2,12 @@
 import Base from "../../../layouts/Base.astro";
 import { hi, lo, scorigamis } from "../../../lib/core";
 import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues } from "../../../lib/data";
-import { href } from "../../../lib/links";
+import { league, leagueMatches, leagues, seasonOf, g } from "../../../lib/data";
+import { href, PREVIEW, seasonHref } from "../../../lib/links";
 import { fmtInt, gridHtml, legendHtml, plural, scorigamiListHtml } from "../../../lib/render";
 
 export function getStaticPaths() {
+  if (PREVIEW) return [];
   return leagues.flatMap((l) =>
     [...new Set(leagueMatches(l.slug).map((m) => m.season))].map((s) => ({ params: { liga: l.slug, ano: String(s) } })),
   );
@@ -28,15 +29,17 @@ const before = all.filter((m) => m.season <= season);
 const idx = seasons.indexOf(season);
 const prev = seasons[idx - 1];
 const next = seasons[idx + 1];
+const S = (s: number) => seasonOf(liga, s);
 ---
 
 <Base
-  title={`Scorigamis do ${lg.short} ${season}`}
-  description={`${plural(mine.length, "scorigami", "scorigamis")} no ${lg.name} ${season}: os placares que aconteceram pela primeira vez.`}
+  title={`Scorigamis ${g(lg, "do", "da")} ${lg.short} ${S(season)}`}
+  description={`${plural(mine.length, "scorigami", "scorigamis")} ${g(lg, "no", "na")} ${lg.name} ${S(season)}: os placares que aconteceram pela primeira vez.`}
   active="scorigamis"
+  liga={liga}
 >
   <a class="back" href={href(`${liga}/scorigamis`)}>← Todas as temporadas</a>
-  <h1>{lg.short} {season}</h1>
+  <h1>{lg.short} {S(season)}</h1>
   {stages.length > 0 && <p class="muted">{stages.join(" e ")}</p>}
   <p class="answer">{mine.length ? plural(mine.length, "scorigami", "scorigamis") : "Nenhuma scorigami"}</p>
   <p class="muted">
@@ -49,10 +52,10 @@ const next = seasons[idx + 1];
     <Fragment set:html={gridHtml(ctx, before, { mode: "norm", ring: new Set(mine.map((m) => `${hi(m)}-${lo(m)}`)) })} />
     <Fragment set:html={legendHtml()} />
   </div>
-  <p class="muted">O gráfico mostra todos os jogos até o fim de {season}. Contornadas: as scorigamis da temporada.</p>
+  <p class="muted">O gráfico mostra todos os jogos até o fim de {S(season)}. Contornadas: as scorigamis da temporada.</p>
 
   <nav class="pager">
-    {prev ? <a href={href(`${liga}/scorigamis/${prev}`)}>← {prev}</a> : <span />}
-    {next ? <a href={href(`${liga}/scorigamis/${next}`)}>{next} →</a> : <span />}
+    {prev ? <a href={seasonHref(liga, prev)}>← {S(prev)}</a> : <span />}
+    {next ? <a href={seasonHref(liga, next)}>{S(next)} →</a> : <span />}
   </nav>
 </Base>

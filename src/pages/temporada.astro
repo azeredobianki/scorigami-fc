@@ -1,0 +1,11 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base title="Temporada" description="As scorigamis de uma temporada." active="scorigamis">
+  <div id="season"><p class="muted">Carregando…</p></div>
+  <script>
+    import { initSeason } from "../scripts/season";
+    initSeason();
+  </script>
+</Base>

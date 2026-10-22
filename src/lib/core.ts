@@ -179,3 +179,8 @@ export function forClub(m: Match, club: string): { gf: number; ga: number; opp: 
   const home = m.home === club;
   return home ? { gf: m.hg, ga: m.ag, opp: m.away, home } : { gf: m.ag, ga: m.hg, opp: m.home, home };
 }
+
+/** "2019" para temporadas de um ano só; "2019/20" para as que viram o ano (ligas europeias). */
+export function seasonLabel(season: number, split?: boolean): string {
+  return split ? `${season}/${String(season + 1).slice(2)}` : String(season);
+}

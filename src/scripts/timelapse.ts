@@ -1,7 +1,7 @@
 // Time-lapse: o gráfico acende temporada a temporada. Cada casa ganha a cor do
 // ano em que o placar apareceu pela primeira vez; as novas da temporada piscam.
-import { hi, lo, scorigamis, type Match } from "../lib/core";
-import { fmtInt } from "../lib/render";
+import { gridSize, hi, lo, scorigamis, type Match } from "../lib/core";
+import { fmtInt, gridHtml } from "../lib/render";
 import { loadData } from "./client-data";
 
 interface Milestone {
@@ -20,10 +20,16 @@ export async function initTimelapse() {
   const play = document.getElementById("tl-play") as HTMLButtonElement;
   const ligaSel = document.querySelector<HTMLSelectElement>("#tl-filters select");
   const $ = (id: string) => document.getElementById(id)!;
-  const chart = document.querySelector<HTMLElement>("#tl-grid figure.chart")!;
-  chart.classList.add("by-year");
   const nodes = new Map<string, HTMLElement>();
-  chart.querySelectorAll<HTMLElement>(".cell").forEach((el) => nodes.set(el.dataset.k!, el));
+  // Redesenha o grid no tamanho da competição escolhida.
+  function buildGrid(pool: Match[]) {
+    const size = gridSize(pool);
+    const holder = $("tl-grid");
+    holder.innerHTML = gridHtml(data.ctx(ligaSel?.value || data.leagues[0].slug), [], { mode: "norm", size });
+    holder.querySelector("figure.chart")!.classList.add("by-year");
+    nodes.clear();
+    holder.querySelectorAll<HTMLElement>(".cell").forEach((el) => nodes.set(el.dataset.k!, el));
+  }
 
   let firsts: Match[] = [];
   let seasons: number[] = [];
@@ -34,11 +40,17 @@ export async function initTimelapse() {
     return LIGHT[0] + t * (LIGHT[1] - LIGHT[0]);
   };
 
+  const label = (s: number) => (ligaSel?.value ? data.ctx(ligaSel.value).season(ligaSel.value, s) : String(s));
+
   function setup() {
     const liga = ligaSel?.value ?? "";
     const pool = liga ? data.matches.filter((m) => m.league === liga) : data.matches;
     seasons = [...new Set(pool.map((m) => m.season))].sort((a, b) => a - b);
     firsts = scorigamis(pool);
+    buildGrid(pool);
+    document.querySelectorAll<HTMLElement>(".milestones li").forEach((li) => (li.hidden = !!liga && li.dataset.league !== liga));
+    document.querySelectorAll(".tl-first").forEach((el) => (el.textContent = label(seasons[0])));
+    document.querySelectorAll(".tl-last").forEach((el) => (el.textContent = label(seasons[seasons.length - 1])));
     $("tl-ramp").style.background = `linear-gradient(90deg, hsl(150 55% ${LIGHT[0]}%), hsl(150 55% ${LIGHT[1]}%))`;
     range.max = String(seasons.length - 1);
     range.value = range.max;
@@ -66,11 +78,11 @@ export async function initTimelapse() {
       }
       el.style.setProperty("--lum", m ? `${lum(m.season)}%` : "");
       el.dataset.tip = m
-        ? `Primeira vez em ${m.season}: ${ctx.clubName(m.home, m.season)} ${m.hg}–${m.ag} ${ctx.clubName(m.away, m.season)}`
+        ? `Primeira vez em ${ctx.season(m.league, m.season)}: ${ctx.clubName(m.home, m.season)} ${m.hg}–${m.ag} ${ctx.clubName(m.away, m.season)}`
         : "Ainda não tinha acontecido";
     }
     shown = i;
-    $("tl-year").textContent = String(season);
+    $("tl-year").textContent = label(season);
     $("tl-count").textContent = fmtInt(firstOf.size);
     const notes = milestones.filter((x) => x.season === season && (!liga || x.league === liga));
     $("tl-note").innerHTML = notes.map((n) => `<b>${n.title}</b>${n.text}`).join("<br>");
@@ -110,6 +122,10 @@ export async function initTimelapse() {
   document.querySelectorAll<HTMLButtonElement>(".milestones button").forEach((b) =>
     b.addEventListener("click", () => {
       stop();
+      if (ligaSel && ligaSel.value && ligaSel.value !== b.dataset.league) {
+        ligaSel.value = b.dataset.league!;
+        setup();
+      }
       const i = seasons.indexOf(Number(b.dataset.season));
       if (i < 0) return;
       range.value = String(i);

@@ -1,3 +1,4 @@
 [
-  {"slug": "brasileirao", "name": "Brasileirão Série A", "short": "Brasileirão", "country": "Brasil", "flag": "🇧🇷", "since": 1959}
+  {"slug": "brasileirao", "name": "Brasileirão Série A", "short": "Brasileirão", "country": "Brasil", "flag": "🇧🇷", "since": 1959},
+  {"slug": "premier-league", "name": "Premier League", "short": "Premier League", "country": "Inglaterra", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "since": 1888, "split": true, "fem": true}
 ]

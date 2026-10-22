@@ -7,9 +7,13 @@ interface Props {
   title: string;
   description: string;
   active?: "grafico" | "scorigamis" | "times" | "timelapse" | "sobre";
+  /** Liga da página; os links do menu levam a ela. */
+  liga?: string;
+  /** Mostra abas para trocar de liga na mesma seção (ex.: "scorigamis"). */
+  switchTo?: string;
 }
-const { title, description, active } = Astro.props;
-const liga = leagues[0].slug;
+const { title, description, active, switchTo } = Astro.props;
+const liga = Astro.props.liga ?? leagues[0].slug;
 const nav = [
   { id: "grafico", label: "Gráfico", href: href("") },
   { id: "scorigamis", label: "Scorigamis", href: href(`${liga}/scorigamis`) },
@@ -49,6 +53,15 @@ const base = previewBase(Astro.url.pathname);
       </nav>
     </header>
     <main>
+      {
+        switchTo && leagues.length > 1 && (
+          <nav class="league-tabs" aria-label="Competição">
+            {leagues.map((l) => (
+              <a href={href(`${l.slug}/${switchTo}`)} aria-current={l.slug === liga ? "page" : undefined}>{l.short}</a>
+            ))}
+          </nav>
+        )
+      }
       <slot />
     </main>
     <footer class="site">

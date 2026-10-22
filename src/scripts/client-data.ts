@@ -1,10 +1,10 @@
 // Carrega a base compacta e monta o contexto de renderização no navegador.
-import type { Match } from "../lib/core";
+import { seasonLabel, type Match } from "../lib/core";
 import { dataUrl } from "../lib/links";
 import type { Ctx } from "../lib/render";
 
 interface Raw {
-  leagues: { slug: string; name: string }[];
+  leagues: { slug: string; name: string; split: boolean; fem: boolean }[];
   clubs: { slug: string; name: string; names?: { name: string; from?: number; to?: number }[] }[];
   matches: [number, number, string, number, number, number, number][];
 }
@@ -35,11 +35,12 @@ export async function loadData(): Promise<ClientData> {
     return n ? n.name : c.name;
   };
   const leagueName = (slug: string) => raw.leagues.find((l) => l.slug === slug)?.name ?? slug;
+  const season = (slug: string, s: number) => seasonLabel(s, raw.leagues.find((l) => l.slug === slug)?.split);
   const today = matches.length ? matches[matches.length - 1].date : "";
   return {
     leagues: raw.leagues,
     clubs: raw.clubs,
     matches,
-    ctx: (linkLeague) => ({ clubName, leagueName, linkLeague, today }),
+    ctx: (linkLeague) => ({ clubName, leagueName, linkLeague, today, season }),
   };
 }

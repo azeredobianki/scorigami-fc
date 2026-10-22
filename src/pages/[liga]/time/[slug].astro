@@ -2,7 +2,7 @@
 import Base from "../../../layouts/Base.astro";
 import { buildCells, exclusiveScores, forClub, gridSize, hi, lo, scorigamis, type Match } from "../../../lib/core";
 import { serverCtx } from "../../../lib/ctx";
-import { club, clubName, league, leagueMatches, leagues } from "../../../lib/data";
+import { club, clubName, league, leagueMatches, leagues, seasonOf, g } from "../../../lib/data";
 import { href } from "../../../lib/links";
 import { clubLink, fmtInt, fmtLong, gridHtml, legendHtml, plural, times } from "../../../lib/render";
 
@@ -22,7 +22,8 @@ const leagueCells = buildCells(all);
 const myCells = buildCells(mine);
 const seasons = [...new Set(mine.map((m) => m.season))].sort((a, b) => a - b);
 const current = Math.max(...all.map((m) => m.season));
-const span = `${seasons[0]}–${seasons[seasons.length - 1] === current ? "hoje" : seasons[seasons.length - 1]}`;
+const S = (s: number) => seasonOf(liga, s);
+const span = `${S(seasons[0])}–${seasons[seasons.length - 1] === current ? "hoje" : S(seasons[seasons.length - 1])}`;
 
 let w = 0, d = 0, l = 0;
 for (const m of mine) {
@@ -69,15 +70,16 @@ const SHOW = 25;
 
 <Base
   title={`Scorigamis do ${c.name}`}
-  description={`${c.name} no ${lg.name}: ${plural(mine.length, "jogo", "jogos")} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}.`}
+  description={`${c.name} ${g(lg, "no", "na")} ${lg.name}: ${plural(mine.length, "jogo", "jogos")} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}.`}
   active="times"
+  liga={liga}
 >
   <a class="back" href={href(`${liga}/times`)}>← Todos os times</a>
   <h1>{c.name}</h1>
   <p class="muted">{span}</p>
   <p>
-    {plural(mine.length, "partida", "partidas")} do {lg.short} desde {seasons[0]} e{" "}
-    {plural(myScorigamis.length, "scorigami", "scorigamis")}, placares finais que o {lg.short} nunca tinha visto.
+    {plural(mine.length, "partida", "partidas")} {g(lg, "do", "da")} {lg.short} desde {S(seasons[0])} e{" "}
+    {plural(myScorigamis.length, "scorigami", "scorigamis")}, placares finais que {g(lg, "o", "a")} {lg.short} nunca tinha visto.
   </p>
 
   <div class="stats">
@@ -95,7 +97,7 @@ const SHOW = 25;
         <h2>Nomes ao longo do tempo</h2>
         <ol class="list">
           {[...nameEras.entries()].map(([n, e]) => (
-            <li>{n}, {e.from === e.to ? e.from : `${e.from}–${e.to}`}, {plural(e.games, "jogo", "jogos")}</li>
+            <li>{n}, {e.from === e.to ? S(e.from) : `${S(e.from)}–${S(e.to)}`}, {plural(e.games, "jogo", "jogos")}</li>
           ))}
         </ol>
       </>
@@ -110,13 +112,13 @@ const SHOW = 25;
 
   <h2>Finais mais raros</h2>
   <p>
-    Placares deste clube que o {lg.short} menos viu.{" "}
+    Placares deste clube que {g(lg, "o", "a")} {lg.short} menos viu.{" "}
     {onlyHere > 0 && `${plural(onlyHere, "deles só aconteceu", "deles só aconteceram")} em jogos deste clube.`}
   </p>
   <div class="table-scroll">
     <table class="data">
       <caption>Jogo mais recente do clube com cada placar</caption>
-      <thead><tr><th>Placar</th><th>{c.name}</th><th class="n">Todo o {lg.short}</th></tr></thead>
+      <thead><tr><th>Placar</th><th>{c.name}</th><th class="n">{g(lg, "Todo o", "Toda a")} {lg.short}</th></tr></thead>
       <tbody>
         {rarest.map((r) => (
           <tr>
@@ -133,7 +135,7 @@ const SHOW = 25;
   <p>Placares que este clube mais repetiu.</p>
   <div class="table-scroll">
     <table class="data">
-      <thead><tr><th>Placar</th><th class="n">{c.name}</th><th class="n">Todo o {lg.short}</th></tr></thead>
+      <thead><tr><th>Placar</th><th class="n">{c.name}</th><th class="n">{g(lg, "Todo o", "Toda a")} {lg.short}</th></tr></thead>
       <tbody>
         {common.map((r) => (
           <tr>
@@ -150,7 +152,7 @@ const SHOW = 25;
   {
     myScorigamis.length ? (
       <>
-        <p>Jogos deste clube que terminaram com um placar inédito no {lg.short}, do mais recente ao mais antigo.</p>
+        <p>Jogos deste clube que terminaram com um placar inédito {g(lg, "no", "na")} {lg.short}, do mais recente ao mais antigo.</p>
         <ol class="list" set:html={myScorigamis.slice(0, SHOW).map(scorigamiItem).join("")} />
         {myScorigamis.length > SHOW && (
           <details class="all">

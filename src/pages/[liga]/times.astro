@@ -1,6 +1,6 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { club, league, leagueMatches, leagues } from "../../lib/data";
+import { club, league, leagueMatches, leagues, seasonOf, g } from "../../lib/data";
 import { href } from "../../lib/links";
 
 export function getStaticPaths() {
@@ -11,6 +11,7 @@ const { liga } = Astro.params as { liga: string };
 const lg = league(liga);
 const all = leagueMatches(liga);
 const current = Math.max(...all.map((m) => m.season));
+const S = (s: number) => seasonOf(liga, s);
 const seasonsOf = new Map<string, Set<number>>();
 for (const m of all)
   for (const c of [m.home, m.away]) {
@@ -31,20 +32,20 @@ const rows = [...seasonsOf.entries()]
       state: c.state,
       old,
       count: seasons.length,
-      years: last === current ? `${first}–hoje` : first === last ? `${first}` : `${first}–${last}`,
+      years: last === current ? `${S(first)}–hoje` : first === last ? S(first) : `${S(first)}–${S(last)}`,
       now: last === current,
     };
   })
   .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 const groups = [
-  { title: `Na Série A em ${current}`, rows: rows.filter((r) => r.now) },
+  { title: `${g(lg, "No", "Na")} ${lg.short} ${S(current)}`, rows: rows.filter((r) => r.now) },
   { title: "Já disputaram", rows: rows.filter((r) => !r.now) },
 ];
 ---
 
-<Base title={`Times do ${lg.short}`} description={`Os ${rows.length} clubes que já disputaram o ${lg.name}, com as scorigamis de cada um.`} active="times">
-  <h1>Times do {lg.short}</h1>
-  <p class="lede">As scorigamis de cada um dos {rows.length} clubes que já jogaram o {lg.short}, com os anos da primeira e da última participação.</p>
+<Base title={`Times ${g(lg, "do", "da")} ${lg.short}`} description={`Os ${rows.length} clubes que já disputaram ${g(lg, "o", "a")} ${lg.name}, com as scorigamis de cada um.`} active="times" liga={liga} switchTo="times">
+  <h1>Times {g(lg, "do", "da")} {lg.short}</h1>
+  <p class="lede">As scorigamis de cada um dos {rows.length} clubes que já jogaram {g(lg, "o", "a")} {lg.short}, com os anos da primeira e da última participação.</p>
   {
     groups.map((g) => (
       <>

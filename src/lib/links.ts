@@ -1,7 +1,7 @@
 // Monta os links internos. No site normal, "/brasileirao/placar/3-2".
 // Na prévia (PUBLIC_PREVIEW=1, hospedagem sem URLs bonitas), vira
 // "brasileirao/placar/3-2.html", resolvido pela tag <base> de cada página.
-const PREVIEW = import.meta.env.PUBLIC_PREVIEW === "1";
+export const PREVIEW = import.meta.env.PUBLIC_PREVIEW === "1";
 
 export function href(path: string): string {
   if (!PREVIEW) return `/${path}`;
@@ -19,3 +19,10 @@ export function previewBase(pathname: string): string | undefined {
   const depth = pathname.split("/").filter(Boolean).length - 1;
   return depth > 0 ? "../".repeat(depth) : "./";
 }
+
+/**
+ * Página de uma temporada. A prévia tem limite de arquivos, então lá as
+ * temporadas são desenhadas no navegador por uma página só.
+ */
+export const seasonHref = (liga: string, season: number) =>
+  PREVIEW ? href(`temporada?liga=${liga}&ano=${season}`) : href(`${liga}/scorigamis/${season}`);
