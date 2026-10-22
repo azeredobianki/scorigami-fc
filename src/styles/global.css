@@ -862,6 +862,7 @@ details.all summary {
 /* Abas de competição nas páginas de liga */
 .league-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
   background: var(--soft);
   border-radius: 6px;
   padding: 2px;

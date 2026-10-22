@@ -4,5 +4,7 @@
   {"slug": "la-liga", "name": "La Liga", "short": "La Liga", "country": "Espanha", "flag": "🇪🇸", "since": 1928, "split": true, "fem": true},
   {"slug": "serie-a", "name": "Serie A", "short": "Serie A", "country": "Itália", "flag": "🇮🇹", "since": 1929, "split": true, "fem": true},
   {"slug": "bundesliga", "name": "Bundesliga", "short": "Bundesliga", "country": "Alemanha", "flag": "🇩🇪", "since": 1963, "split": true, "fem": true},
-  {"slug": "ligue-1", "name": "Ligue 1", "short": "Ligue 1", "country": "França", "flag": "🇫🇷", "since": 1938, "split": true, "fem": true}
+  {"slug": "ligue-1", "name": "Ligue 1", "short": "Ligue 1", "country": "França", "flag": "🇫🇷", "since": 1938, "split": true, "fem": true},
+  {"slug": "eredivisie", "name": "Eredivisie", "short": "Eredivisie", "country": "Holanda", "flag": "🇳🇱", "since": 1956, "split": true, "fem": true},
+  {"slug": "primeira-liga", "name": "Primeira Liga", "short": "Primeira Liga", "country": "Portugal", "flag": "🇵🇹", "since": 1994, "split": true, "fem": true}
 ]
