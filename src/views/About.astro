@@ -18,7 +18,7 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
     <p>
       Scorigami é um placar final que nunca tinha acontecido antes na história de uma competição. O conceito foi criado por
       Jon Bois para a NFL e ganhou versões para outros esportes, como o <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
-      O Scorigami FC leva a ideia para o futebol, com o Brasileirão, as principais ligas europeias e a MLS.
+      O Scorigami FC leva a ideia para o futebol, com o Brasileirão, as principais ligas europeias, a MLS, a Primera argentina e a Liga MX.
     </p>
 
     <h2>O que conta como placar final</h2>
@@ -58,6 +58,24 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
       nos pênaltis; aqui vale o empate de campo.
     </p>
 
+    <h2>O que entra na Argentina</h2>
+    <p>
+      A primeira divisão desde 1891, com os campeonatos dissidentes oficiais (a FAF de 1912 a 1914 e a Asociación Amateurs
+      de 1919 a 1926), os torneios amadores da AAF de 1931 a 1934 e a Copa de Honor de 1936. Quando um ano teve mais de um
+      torneio, como Apertura e Clausura ou Metropolitano e Nacional, todos entram, com as fases finais previstas no
+      regulamento. Ficam de fora desempates, jogos de acesso e rebaixamento, a Copa Argentina e as supercopas. A temporada é o
+      ano do primeiro jogo do torneio; as temporadas longas de 1985/86 a 1990/91 contam no ano de início. Em 1988/89, os
+      empates iam para os pênaltis valendo ponto: aqui vale o empate, e os pênaltis aparecem como observação.
+    </p>
+
+    <h2>O que entra no México</h2>
+    <p>
+      A primeira divisão desde 1943/44, com a temporada regular, a liguilla e a repescagem. Ficam de fora a Copa México, o
+      Campeón de Campeones e os jogos de rebaixamento. Desde 1996/97 o ano tem dois torneios curtos (hoje Apertura e
+      Clausura), contados juntos na temporada que começa no segundo semestre: Apertura 2024 e Clausura 2025 formam 2024/25. O
+      torneio México 70 conta em 1969/70.
+    </p>
+
     <h2 id="fontes">Fontes</h2>
     <p>A base atual tem {T.N(matches.length)} jogos de {from} a {to}, em {leagues.length === 1 ? "uma liga" : `${leagues.length} ligas`}.</p>
     <ul>
@@ -66,6 +84,7 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
       <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão e Brasileirão de 1959 a 2002, conferidos com o <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> de 1971 a 2002.</li>
       <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, de James Curley: as ligas europeias e a MLS até 2024/25, conferidas jogo a jogo com <a href="https://github.com/footballcsv">footballcsv</a>, openfootball e <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, e com as tabelas finais do <a href="https://www.rsssf.org/">RSSSF</a>.</li>
       <li>openfootball/football.json: ligas europeias e MLS a partir de 2025/26.</li>
+      <li><a href="https://www.rsssf.org/">RSSSF</a>: Argentina até 2003 e México até 2001, e <a href="https://www.espn.com/soccer/">ESPN</a> depois disso, conferidos jogo a jogo entre si, com football-data.co.uk e com openfootball.</li>
     </ul>
     <p>
       O total de jogos de cada temporada é conferido antes de publicar. No Brasileirão, ficaram de fora 44 jogos antigos sem
@@ -82,7 +101,7 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
     <p>
       A scorigami is a final score that had never happened before in the history of a competition. The idea was created by
       Jon Bois for the NFL and has spread to other sports, like <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
-      Scorigami FC brings it to football, with Brazil's Brasileirão, the top European leagues and MLS.
+      Scorigami FC brings it to football, with Brazil's Brasileirão, the top European leagues, MLS, the Argentine Primera and Liga MX.
     </p>
 
     <h2>What counts as a final score</h2>
@@ -122,6 +141,25 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
       shootouts; here the draw on the pitch counts.
     </p>
 
+    <h2>What Argentina includes</h2>
+    <p>
+      The top flight since 1891, including the official breakaway championships (the FAF from 1912 to 1914 and the
+      Asociación Amateurs from 1919 to 1926), the AAF amateur tournaments from 1931 to 1934 and the 1936 Copa de Honor.
+      When a year had more than one tournament, like Apertura and Clausura or Metropolitano and Nacional, all of them count,
+      with the final rounds set out in the rules. Playoffs, promotion and relegation games, the Copa Argentina and super cups
+      are left out. The season is the year of the tournament's first game; the long seasons from 1985/86 to 1990/91 count in
+      their starting year. In 1988/89, draws went to penalties for a bonus point: here the draw counts, and the penalties
+      appear as a note.
+    </p>
+
+    <h2>What Mexico includes</h2>
+    <p>
+      The top flight since 1943/44, with the regular season, the liguilla and the play-ins. The Copa México, the Campeón de
+      Campeones and relegation games are left out. Since 1996/97 each year has two short tournaments (now Apertura and
+      Clausura), counted together in the season that starts in the second half of the year: Apertura 2024 and Clausura 2025
+      make up 2024/25. The México 70 tournament counts in 1969/70.
+    </p>
+
     <h2 id="fontes">Sources</h2>
     <p>The database currently has {T.N(matches.length)} games from {from} to {to}, in {leagues.length === 1 ? "one league" : `${leagues.length} leagues`}.</p>
     <ul>
@@ -130,6 +168,7 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
       <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão and Brasileirão from 1959 to 2002, checked against the <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> from 1971 to 2002.</li>
       <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, by James Curley: the European leagues and MLS up to 2024/25, checked game by game against <a href="https://github.com/footballcsv">footballcsv</a>, openfootball and <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, and against the final tables at <a href="https://www.rsssf.org/">RSSSF</a>.</li>
       <li>openfootball/football.json: European leagues and MLS from 2025/26.</li>
+      <li><a href="https://www.rsssf.org/">RSSSF</a>: Argentina up to 2003 and Mexico up to 2001, and <a href="https://www.espn.com/soccer/">ESPN</a> after that, checked game by game against each other, football-data.co.uk and openfootball.</li>
     </ul>
     <p>
       The number of games in each season is checked before publishing. In the Brasileirão, 44 old games without a date or
@@ -147,7 +186,7 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
     <p>
       Una scorigami es un marcador final que nunca había ocurrido antes en la historia de una competición. El concepto lo
       creó Jon Bois para la NFL y ganó versiones en otros deportes, como <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
-      Scorigami FC lleva la idea al fútbol, con el Brasileirão, las principales ligas europeas y la MLS.
+      Scorigami FC lleva la idea al fútbol, con el Brasileirão, las principales ligas europeas, la MLS, la Primera argentina y la Liga MX.
     </p>
 
     <h2>Qué cuenta como marcador final</h2>
@@ -187,6 +226,25 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
       decidían por penales; aquí vale el empate del campo.
     </p>
 
+    <h2>Qué incluye la Argentina</h2>
+    <p>
+      La primera división desde 1891, con los campeonatos disidentes oficiales (la FAF de 1912 a 1914 y la Asociación
+      Amateurs de 1919 a 1926), los torneos amateurs de la AAF de 1931 a 1934 y la Copa de Honor de 1936. Cuando un año tuvo
+      más de un torneo, como Apertura y Clausura o Metropolitano y Nacional, entran todos, con las fases finales previstas en
+      el reglamento. Quedan fuera los desempates, las promociones y descensos, la Copa Argentina y las supercopas. La
+      temporada es el año del primer partido del torneo; las temporadas largas de 1985/86 a 1990/91 cuentan en el año de
+      inicio. En 1988/89 los empates se definían por penales con un punto extra: aquí vale el empate, y los penales aparecen
+      como nota.
+    </p>
+
+    <h2>Qué incluye México</h2>
+    <p>
+      La primera división desde 1943/44, con la temporada regular, la liguilla y el repechaje. Quedan fuera la Copa México,
+      el Campeón de Campeones y los partidos de descenso. Desde 1996/97 cada año tiene dos torneos cortos (hoy Apertura y
+      Clausura), contados juntos en la temporada que empieza en el segundo semestre: Apertura 2024 y Clausura 2025 forman
+      2024/25. El torneo México 70 cuenta en 1969/70.
+    </p>
+
     <h2 id="fontes">Fuentes</h2>
     <p>La base actual tiene {T.N(matches.length)} partidos de {from} a {to}, en {leagues.length === 1 ? "una liga" : `${leagues.length} ligas`}.</p>
     <ul>
@@ -195,6 +253,7 @@ const to = matches.reduce((x, m) => Math.max(x, m.season), 0);
       <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: Taça Brasil, Robertão y Brasileirão de 1959 a 2002, cotejados con el <a href="https://github.com/rodrigoazs/football-matches-dataset">football-matches-dataset</a> de 1971 a 2002.</li>
       <li><a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a>, de James Curley: las ligas europeas y la MLS hasta 2024/25, cotejadas partido a partido con <a href="https://github.com/footballcsv">footballcsv</a>, openfootball y <a href="https://www.football-data.co.uk/">football-data.co.uk</a>, y con las tablas finales de <a href="https://www.rsssf.org/">RSSSF</a>.</li>
       <li>openfootball/football.json: ligas europeas y MLS desde 2025/26.</li>
+      <li><a href="https://www.rsssf.org/">RSSSF</a>: Argentina hasta 2003 y México hasta 2001, y <a href="https://www.espn.com/soccer/">ESPN</a> después, cotejados partido a partido entre sí, con football-data.co.uk y con openfootball.</li>
     </ul>
     <p>
       El total de partidos de cada temporada se revisa antes de publicar. En el Brasileirão quedaron fuera 44 partidos antiguos

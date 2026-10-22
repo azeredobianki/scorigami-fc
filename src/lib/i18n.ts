@@ -172,7 +172,7 @@ function pt() {
     loading: "Carregando",
 
     // Home
-    homeDesc: "Todos os placares finais da história do Brasileirão e das principais ligas europeias e da MLS em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram.",
+    homeDesc: "Todos os placares finais da história do Brasileirão, das principais ligas europeias e de outras ligas das Américas em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram.",
     filtersLabel: "Filtros do gráfico",
     fCompetitions: "Competições",
     fTeams: "Times",
@@ -202,11 +202,15 @@ function pt() {
 
     // Eras
     allEras: "Todas as eras",
-    decade: (d: number) => `Anos ${String(d).slice(2)} (${d}–${d + 9})`,
+    decade: (d: number) => `Anos ${d}`,
     phases: {
       "pontos-corridos": "Pontos corridos (2003–)",
       "1971-2002": "Mata-mata nacional (1971–2002)",
       "1959-1970": "Taça Brasil e Robertão (1959–1970)",
+      profissional: "Profissionalismo (1931–)",
+      amador: "Amadorismo (1891–1930)",
+      "torneios-curtos": "Torneios curtos (1996/97–)",
+      "temporadas-longas": "Temporadas longas (1943/44–1995/96)",
     } as Record<string, string>,
 
     // Scorigamis
@@ -235,7 +239,7 @@ function pt() {
     formerly: "Antes:",
 
     // Time-lapse
-    tlDesc: "Veja o gráfico de placares do Brasileirão e das principais ligas europeias e da MLS se preencher temporada a temporada.",
+    tlDesc: "Veja o gráfico de placares do Brasileirão, das principais ligas europeias e de outras ligas das Américas se preencher temporada a temporada.",
     tlH1: "Todos os placares, temporada a temporada",
     tlIntro: "Cada casa acende na primeira vez que aquele placar final acontece.",
     tlIntroLink: "Veja quantas vezes cada placar aconteceu.",
@@ -391,7 +395,7 @@ function en(): Dict {
     footerReport: "Report an error",
     loading: "Loading",
 
-    homeDesc: "Every final score in the history of the Brasileirão, the top European leagues and MLS in one chart: which have happened, how often, and which never have.",
+    homeDesc: "Every final score in the history of the Brasileirão, the top European leagues and other leagues in the Americas in one chart: which have happened, how often, and which never have.",
     filtersLabel: "Chart filters",
     fCompetitions: "Competitions",
     fTeams: "Teams",
@@ -419,11 +423,15 @@ function en(): Dict {
     topScores: "Most frequent scores",
 
     allEras: "All eras",
-    decade: (d) => `${d}s (${d}–${d + 9})`,
+    decade: (d) => `${d}s`,
     phases: {
       "pontos-corridos": "League format (2003–)",
       "1971-2002": "National knockout era (1971–2002)",
       "1959-1970": "Taça Brasil and Robertão (1959–1970)",
+      profissional: "Professional era (1931–)",
+      amador: "Amateur era (1891–1930)",
+      "torneios-curtos": "Short tournaments (1996/97–)",
+      "temporadas-longas": "Full seasons (1943/44–1995/96)",
     },
 
     scorigamisAllTitle: "Scorigamis across all competitions",
@@ -449,7 +457,7 @@ function en(): Dict {
     nSeasons: (n) => `${n} ${n === 1 ? "season" : "seasons"}`,
     formerly: "Formerly:",
 
-    tlDesc: "Watch the score chart of the Brasileirão, the top European leagues and MLS fill up season by season.",
+    tlDesc: "Watch the score chart of the Brasileirão, the top European leagues and other leagues in the Americas fill up season by season.",
     tlH1: "Every score, season by season",
     tlIntro: "Each square lights up the first time that final score happens.",
     tlIntroLink: "See how many times each score has happened.",
@@ -606,7 +614,7 @@ function es(): Dict {
     footerReport: "Reportar un error",
     loading: "Cargando",
 
-    homeDesc: "Todos los marcadores finales de la historia del Brasileirão, de las principales ligas europeas y de la MLS en un gráfico: cuáles ya ocurrieron, cuántas veces y cuáles nunca.",
+    homeDesc: "Todos los marcadores finales de la historia del Brasileirão, de las principales ligas europeas y de otras ligas de América en un gráfico: cuáles ya ocurrieron, cuántas veces y cuáles nunca.",
     filtersLabel: "Filtros del gráfico",
     fCompetitions: "Competiciones",
     fTeams: "Equipos",
@@ -634,11 +642,15 @@ function es(): Dict {
     topScores: "Marcadores más frecuentes",
 
     allEras: "Todas las épocas",
-    decade: (d) => `Años ${String(d).slice(2)} (${d}–${d + 9})`,
+    decade: (d) => `Años ${d}`,
     phases: {
       "pontos-corridos": "Liga regular (2003–)",
       "1971-2002": "Eliminatorias nacionales (1971–2002)",
       "1959-1970": "Taça Brasil y Robertão (1959–1970)",
+      profissional: "Profesionalismo (1931–)",
+      amador: "Amateurismo (1891–1930)",
+      "torneios-curtos": "Torneos cortos (1996/97–)",
+      "temporadas-longas": "Temporadas largas (1943/44–1995/96)",
     },
 
     scorigamisAllTitle: "Scorigamis en todas las competiciones",
@@ -664,7 +676,7 @@ function es(): Dict {
     nSeasons: (n) => `${n} ${n === 1 ? "temporada" : "temporadas"}`,
     formerly: "Antes:",
 
-    tlDesc: "Mira cómo el gráfico de marcadores del Brasileirão, de las principales ligas europeas y de la MLS se llena temporada a temporada.",
+    tlDesc: "Mira cómo el gráfico de marcadores del Brasileirão, de las principales ligas europeas y de otras ligas de América se llena temporada a temporada.",
     tlH1: "Todos los marcadores, temporada a temporada",
     tlIntro: "Cada casilla se enciende la primera vez que ocurre ese marcador final.",
     tlIntroLink: "Mira cuántas veces ocurrió cada marcador.",

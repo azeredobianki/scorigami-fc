@@ -23,6 +23,14 @@ const PHASES: Record<string, { id: string; label: string; from: number; to?: num
     { id: "ligue-1", label: "Ligue 1 (2002/03–)", from: 2002 },
     { id: "division-1", label: "Division 1 (1938/39–2001/02)", from: 1938, to: 2001 },
   ],
+  "primera-argentina": [
+    { id: "profissional", label: "Profissionalismo (1931–)", from: 1931 },
+    { id: "amador", label: "Amadorismo (1891–1930)", from: 1891, to: 1930 },
+  ],
+  "liga-mx": [
+    { id: "torneios-curtos", label: "Torneios curtos (1996/97–)", from: 1996 },
+    { id: "temporadas-longas", label: "Temporadas longas (1943/44–1995/96)", from: 1943, to: 1995 },
+  ],
 };
 
 export function eras(seasons: number[], liga = "", lang: Lang = "pt"): Era[] {

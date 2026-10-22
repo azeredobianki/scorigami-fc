@@ -2,7 +2,7 @@
 import Base from "../layouts/Base.astro";
 import { buildCells, scorigamis } from "../lib/core";
 import { serverCtx } from "../lib/ctx";
-import { clubs, lastDate, leagues, matches } from "../lib/data";
+import { clubs, lastDate, leagues, matches, seasonOf } from "../lib/data";
 import { eras } from "../lib/eras";
 import { href } from "../lib/links";
 import { gridHtml, highlightsHtml, legendHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
@@ -13,7 +13,12 @@ const T = t(lang);
 const h = (path: string) => href(path, lang);
 const ctx = serverCtx("todas", lang);
 const since = { pt: "desde", en: "since", es: "desde" }[lang];
-const europe = T.join(leagues.filter((l) => l.slug !== "brasileirao" && l.slug !== "mls").map((l) => (l.slug === "premier-league" ? `${l.short} (${since} ${l.since})` : l.short)));
+// Ligas das Américas além do Brasileirão; as demais são as europeias.
+const AMERICAS = ["mls", "primera-argentina", "liga-mx"];
+const europe = T.join(
+  leagues.filter((l) => l.slug !== "brasileirao" && !AMERICAS.includes(l.slug)).map((l) => (l.slug === "premier-league" ? `${l.short} (${since} ${l.since})` : l.short)),
+);
+const americas = T.join(leagues.filter((l) => AMERICAS.includes(l.slug)).map((l) => `${l.short} (${since} ${seasonOf(l.slug, l.since)})`));
 const cells = buildCells(matches, "norm");
 const recent = scorigamis(matches, "norm", true).slice(-5).reverse();
 const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
@@ -91,7 +96,7 @@ const clubGroups = leagues.map((l) => {
   {lang === "pt" && (
     <p>
       Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e das
-      principais ligas europeias ({europe}), além da MLS desde 1996. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes: no filtro Geral, em nenhuma das competições; com uma
+      principais ligas europeias ({europe}) e de outras ligas das Américas: {americas}. Também mostra todos os placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes: no filtro Geral, em nenhuma das competições; com uma
       liga escolhida, naquela liga. O site acompanha cada placar
       novo e quantas vezes cada um já se repetiu. A ideia vem do <a href="https://nflscorigami.com/">NFL Scorigami</a>, criado
       por Jon Bois.
@@ -100,7 +105,7 @@ const clubGroups = leagues.map((l) => {
   {lang === "en" && (
     <p>
       This chart shows every final score in the history of Brazil's Brasileirão, going back to the 1959 Taça Brasil, and of
-      the top European leagues ({europe}), plus MLS since 1996. It also shows every score that has never happened. Pick a
+      the top European leagues ({europe}) and of other leagues in the Americas: {americas}. It also shows every score that has never happened. Pick a
       competition in the filter to see just that one. A <b>scorigami</b> is a score that had never happened before: with
       all competitions selected, in none of them; with one league selected, in that league. The site tracks every new score
       and how many times each one has been repeated. The idea comes from <a href="https://nflscorigami.com/">NFL Scorigami</a>,
@@ -110,7 +115,7 @@ const clubGroups = leagues.map((l) => {
   {lang === "es" && (
     <p>
       Este gráfico muestra todos los marcadores finales de la historia del Brasileirão, desde la Taça Brasil de 1959, y de
-      las principales ligas europeas ({europe}), además de la MLS desde 1996. También muestra todos los marcadores que
+      las principales ligas europeas ({europe}) y de otras ligas de América: {americas}. También muestra todos los marcadores que
       nunca ocurrieron. Elige una competición en el filtro para ver solo esa. Una <b>scorigami</b> es un marcador que nunca
       había ocurrido antes: con el filtro General, en ninguna de las competiciones; con una liga elegida, en esa liga. El
       sitio sigue cada marcador nuevo y cuántas veces se repitió cada uno. La idea viene de

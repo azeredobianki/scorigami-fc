@@ -8,13 +8,15 @@ import { seasonPage } from "../lib/pages";
 const { lang, liga, ano } = Astro.props as { lang: Lang; liga: string; ano: string };
 const season = Number(ano);
 const all = leagueMatches(liga);
-// Fases do Brasileirão antigo (Taça Brasil, Robertão) quando a temporada teve mais de uma competição.
+// Torneios da temporada quando ela teve mais de um: Taça Brasil e Robertão no Brasileirão antigo;
+// Apertura e Clausura, Metropolitano e Nacional etc. na Argentina e no México ("Clausura: semifinal").
+// Nessas duas ligas, o nome do torneio vem com inicial maiúscula e a fase sozinha, em minúscula.
 const stages = [
   ...new Set(
     all
       .filter((m) => m.season === season)
-      .map((m) => m.stage?.split(" - ")[0])
-      .filter((s): s is string => !!s && /Taça|Robertão/.test(s)),
+      .map((m) => (liga === "brasileirao" ? m.stage?.split(" - ")[0] : m.stage?.split(":")[0]))
+      .filter((s): s is string => !!s && (liga === "brasileirao" ? /Taça|Robertão/.test(s) : /^\p{Lu}/u.test(s))),
   ),
 ];
 const page = seasonPage(serverCtx(liga, lang), league(liga), all, season, stages);
