@@ -18,8 +18,7 @@ export interface League {
   fem?: boolean;
 }
 
-/** Escolhe a forma masculina ou feminina conforme a liga: g(lg, "do", "da"). */
-export const g = (lg: { fem?: boolean }, masc: string, fem: string) => (lg.fem ? fem : masc);
+export { g } from "./core";
 
 export interface Club {
   slug: string;

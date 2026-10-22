@@ -16,7 +16,7 @@ import {
   type Match,
   type Mode,
 } from "./core";
-import { href } from "./links";
+import { clubPageHref, scorePageHref } from "./links";
 
 export interface Ctx {
   clubName: (slug: string, season?: number) => string;
@@ -54,8 +54,8 @@ export function plural(n: number, one: string, many: string): string {
 export const times = (n: number) => (n ? plural(n, "vez", "vezes") : "Nunca");
 
 export const scoreHref = (ctx: Ctx, a: number, b: number, league = ctx.linkLeague) =>
-  href(`${league}/placar/${Math.max(a, b)}-${Math.min(a, b)}`);
-export const clubHref = (ctx: Ctx, slug: string, league = ctx.linkLeague) => href(`${league}/time/${slug}`);
+  scorePageHref(league, `${Math.max(a, b)}-${Math.min(a, b)}`);
+export const clubHref = (ctx: Ctx, slug: string, league = ctx.linkLeague) => clubPageHref(league, slug);
 
 export function clubLink(ctx: Ctx, slug: string, season?: number, league?: string): string {
   return `<a href="${clubHref(ctx, slug, league)}">${esc(ctx.clubName(slug, season))}</a>`;

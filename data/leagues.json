@@ -1,4 +1,8 @@
 [
   {"slug": "brasileirao", "name": "Brasileirão Série A", "short": "Brasileirão", "country": "Brasil", "flag": "🇧🇷", "since": 1959},
-  {"slug": "premier-league", "name": "Premier League", "short": "Premier League", "country": "Inglaterra", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "since": 1888, "split": true, "fem": true}
+  {"slug": "premier-league", "name": "Premier League", "short": "Premier League", "country": "Inglaterra", "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "since": 1888, "split": true, "fem": true},
+  {"slug": "la-liga", "name": "La Liga", "short": "La Liga", "country": "Espanha", "flag": "🇪🇸", "since": 1928, "split": true, "fem": true},
+  {"slug": "serie-a", "name": "Serie A", "short": "Serie A", "country": "Itália", "flag": "🇮🇹", "since": 1929, "split": true, "fem": true},
+  {"slug": "bundesliga", "name": "Bundesliga", "short": "Bundesliga", "country": "Alemanha", "flag": "🇩🇪", "since": 1963, "split": true, "fem": true},
+  {"slug": "ligue-1", "name": "Ligue 1", "short": "Ligue 1", "country": "França", "flag": "🇫🇷", "since": 1938, "split": true, "fem": true}
 ]

@@ -215,20 +215,122 @@ def load_rsssf_ita(cfg):
                 flush()
                 cur, rnd = date(int(h[4]), IT_MONTHS[h[3].lower()], int(h[2])), h[1]
                 continue
-            if seen_result and re.fullmatch(r"\s*(SERIE B|Serie B|Italy Cup.*)\s*", ln):
-                break
-            r = re.match(r"(\S.*?)\s+-\s+(\S.*?)\s+(\d{1,2})-(\d{1,2})\s*(\(?\*+\d?\)?)?(?:\s|$)", ln)
+            if seen_result and (re.fullmatch(r"\s*(SERIE B|Serie B|Italy Cup.*)\s*", ln)
+                                or re.match(r"\s*(\[\*+\]|\(\*+\))?\s*(Relegation|Decisive|Spareggi|Play-?off|Play-?out)",
+                                            ln, re.I)):
+                break  # desempates e playoffs ficam fora, como no engsoccerdata
+            r = re.match(r"(\S.*?)\s+-\s+(\S.*?)\s+(\d{1,2})-(\d{1,2})\s*(\[\*+\]|\(\*+\d?\)|\*+\d?|\(\d\))?(?:\s|$)", ln)
             if r and cur:
                 seen_result = True
-                mark = (r[5] or "").strip("()")
+                mark = (r[5] or "").strip("()[]")
                 pending.append((dict(season=season, date=cur, round=rnd, home_raw=r[1].strip(),
                                      away_raw=r[2].strip(), hg=int(r[3]), ag=int(r[4]), source=SRC_RSSSF), mark))
                 continue
-            nm = re.match(r"\s*\(?(\*+\d?)\)?\s*(.*)", ln)
+            nm = re.match(r"\s*(\[\*+\]|\(\*+\d?\)|\*+\d?|\(\d\))\s*(.*)", ln)
             if nm and pending:
-                notes[nm[1]] = nm[2].strip()
+                notes[nm[1].strip("()[]")] = nm[2].strip()
         flush()
     return rows
+
+
+def load_rsssf_fra(cfg):
+    """Tabelas de cruzamento (mandante na linha) de franfullhist.html, 1932-1998.
+    Não têm data: servem para conferir placares, não para acrescentar jogos."""
+    if cfg["es"] != "france":
+        return []
+    text = re.sub(r"<[^>]+>", " ", (RAW / "rsssf" / "franfullhist.html").read_text(encoding="latin-1"))
+    parts = re.split(r"\n\s*(\d{4})-\d{4}\s*\n", text)
+    rows = []
+    cell = r"\d+-\d+|\*\*\*|---|xxx"
+    for i in range(1, len(parts), 2):
+        season = int(parts[i])
+        block = []
+        for ln in parts[i + 1].splitlines() + [""]:
+            cells = re.findall(cell, ln)
+            name = re.split(cell, ln)[0].strip() if cells else ""
+            if len(cells) >= 8 and name and "***" in cells:
+                block.append((name, cells))
+                continue
+            if block:
+                names = [n for n, _ in block]
+                if all(len(c) == len(block) for _, c in block):
+                    for a, (home, cs) in enumerate(block):
+                        for b, c in enumerate(cs):
+                            m = re.fullmatch(r"(\d+)-(\d+)", c)
+                            if a != b and m:
+                                rows.append(dict(season=season, date=None, round="", home_raw=home,
+                                                 away_raw=names[b], hg=int(m[1]), ag=int(m[2]), source=SRC_RSSSF))
+                block = []
+    return rows
+
+
+def map_crosstable(sec, rows, clubs):
+    """Nome da tabela de cruzamento -> clube da temporada, por semelhança do
+    nome; confirma pelos placares."""
+    from difflib import SequenceMatcher
+    by_season = defaultdict(set)
+    for r in rows:
+        by_season[r["season"]] |= {r["home"], r["away"]}
+    names_of = {slug: [norm(n) for n in [e["name"], *e["aliases"]]] for slug, e in clubs.entries.items()}
+    raw_by_season = defaultdict(set)
+    for m in sec:
+        raw_by_season[m["season"]] |= {m["home_raw"], m["away_raw"]}
+    assign = {}
+    for season, raws in raw_by_season.items():
+        ours = by_season.get(season, set())
+        sims = []
+        for raw in raws:
+            for slug in ours:
+                sim = max(SequenceMatcher(None, norm(raw), n).ratio() for n in names_of[slug])
+                sims.append((sim, raw, slug))
+        used_raw, used_slug = set(), set()
+        for sim, raw, slug in sorted(sims, reverse=True):
+            if raw not in used_raw and slug not in used_slug:
+                assign[(season, raw)] = slug
+                used_raw.add(raw)
+                used_slug.add(slug)
+    # Troca nomes mal casados: troca dois nomes enquanto isso aumenta os placares que batem.
+    score = {(r["season"], r["home"], r["away"]): (r["hg"], r["ag"]) for r in rows}
+    by_s = defaultdict(list)
+    for m in sec:
+        by_s[m["season"]].append(m)
+
+    def hits(season, amap):
+        return sum(score.get((season, amap.get(m["home_raw"]), amap.get(m["away_raw"]))) == (m["hg"], m["ag"])
+                   for m in by_s[season])
+
+    for season, ms in by_s.items():
+        amap = {raw: assign[(season, raw)] for raw in raw_by_season[season] if (season, raw) in assign}
+        best = hits(season, amap)
+        improved = True
+        while improved:
+            improved = False
+            keys = list(amap)
+            for i in range(len(keys)):
+                for j in range(i + 1, len(keys)):
+                    a, b = keys[i], keys[j]
+                    amap[a], amap[b] = amap[b], amap[a]
+                    h = hits(season, amap)
+                    if h > best:
+                        best, improved = h, True
+                    else:
+                        amap[a], amap[b] = amap[b], amap[a]
+        for raw, slug in amap.items():
+            assign[(season, raw)] = slug
+    out = []
+    for m in sec:
+        h, a = assign.get((m["season"], m["home_raw"])), assign.get((m["season"], m["away_raw"]))
+        if h and a:
+            out.append({**m, "home": h, "away": a})
+    agree = Counter()
+    total = Counter()
+    for m in out:
+        k = (m["season"], m["home"], m["away"])
+        if k in score:
+            total[m["season"]] += 1
+            agree[m["season"]] += score[k] == (m["hg"], m["ag"])
+    bad = {s for s in total if agree[s] < 0.8 * total[s]}
+    return [m for m in out if m["season"] not in bad], sorted(bad)
 
 
 # ---------------------------------------------------------------- clubes
@@ -242,6 +344,9 @@ class Clubs:
         self.country, self.code = COUNTRY[league]
         merge, display = MERGE[league], DISPLAY[league]
         taken = {c["slug"]: c for c in existing}
+        # grafias que já são de clube de outro país não viram apelido (ingest.py usa apelidos globais)
+        self.foreign = {n for c in existing if c.get("country", "Brasil") != self.country
+                        for n in [c["name"], *c.get("aliases", [])]}
         seasons = defaultdict(set)
         for r in prim:
             for n in (r["home_raw"], r["away_raw"]):
@@ -258,7 +363,7 @@ class Clubs:
             e = self.entries[slug]
             if n != c and old:
                 e.setdefault("_old", []).append((old, min(seasons[n]), max(seasons[n])))
-            if n != e["name"]:
+            if n != e["name"] and n not in self.foreign:
                 e["aliases"].append(n)
         for slug, e in self.entries.items():
             olds = sorted(e.pop("_old", []), key=lambda x: x[1])
@@ -276,13 +381,8 @@ class Clubs:
         if slug in self.entries:
             self.slug_of[raw] = slug
             return slug
-        e = taken.get(slug)
-        if e is None:
-            e = {"slug": slug, "name": name, "state": "", "country": self.country, "aliases": []}
-        else:  # já cadastrado numa execução anterior: mantém nome e apelidos
-            e = {**e, "aliases": list(e.get("aliases", []))}
-            e.pop("names", None)
-        self.entries[slug] = e
+        # o cadastro dos clubes desta liga é refeito a cada execução
+        self.entries[slug] = {"slug": slug, "name": name, "state": "", "country": self.country, "aliases": []}
         self.slug_of[raw] = slug
         return slug
 
@@ -291,7 +391,7 @@ class Clubs:
 
     def add_alias(self, slug, name):
         e = self.entries[slug]
-        if name != e["name"] and name not in e["aliases"]:
+        if name != e["name"] and name not in e["aliases"] and name not in self.foreign:
             e["aliases"].append(name)
 
 
@@ -342,7 +442,8 @@ def map_names(sec, rows, clubs, existing, log, strict=True):
         for side in ("home", "away"):
             raw = m[f"{side}_raw"]
             m[side] = per_season.get((m["season"], raw), resolved[raw])
-            clubs.add_alias(m[side], raw)
+            if strict:  # grafias do RSSSF trazem marcas de nota (*, (1)): não viram apelido
+                clubs.add_alias(m[side], raw)
     bad = defaultdict(set)
     for m in sec:
         bad[(m["season"], m["home"])].add(m["home_raw"])
@@ -392,19 +493,40 @@ def crosscheck(rows, sec, sus, stats, notes, whole_seasons=True):
     diffs = []
     added = []
     have = {r["season"] for r in rows}
-    for m in sorted(sec, key=lambda m: m["date"]):
+    for m in sorted(sec, key=lambda m: m["date"] or date.min):
         cands = [r for r in by_pair[(m["season"], m["home"], m["away"])] if id(r) not in used]
+        if not cands and m["date"] is None:
+            stats[(m["season"], src)]["nodate"] += 1
+            notes.append(f"{label(m['season'])} {m['home']} x {m['away']} {m['hg']}-{m['ag']}: só no {src}, "
+                         "sem data; fica de fora")
+            continue
         if not cands:
+            # mando trocado no principal: B x A repetido na temporada, placar invertido, mesma data
+            rev = [r for r in by_pair[(m["season"], m["away"], m["home"])] if id(r) not in used]
+            hit = next((r for r in rev if len(by_pair[(m["season"], m["away"], m["home"])]) > 1
+                        and (r["ag"], r["hg"]) == (m["hg"], m["ag"])
+                        and abs((r["date"] - m["date"]).days) <= 3), None)
+            if hit is not None:
+                by_pair[(m["season"], m["away"], m["home"])].remove(hit)
+                hit["home"], hit["away"], hit["hg"], hit["ag"] = m["home"], m["away"], m["hg"], m["ag"]
+                by_pair[(m["season"], m["home"], m["away"])].append(hit)
+                used.add(id(hit))
+                hit.setdefault("seen", []).append(src)
+                stats[(m["season"], src)]["matched"] += 1
+                notes.append(f"{label(m['season'])} {hit['date']} {m['home']} x {m['away']}: mando corrigido ({src})")
+                continue
             if (whole_seasons or m["season"] in have) and m.get("status") != "sem placar de campo":
                 added.append(m)
             continue
-        r = min(cands, key=lambda r: (id(r) in sus, abs((r["date"] - m["date"]).days)))
+        r = min(cands, key=lambda r: (id(r) in sus, abs((r["date"] - m["date"]).days) if m["date"] else 0))
         used.add(id(r))
         st = stats[(m["season"], src)]
         st["matched"] += 1
         if (r["hg"], r["ag"]) != (m["hg"], m["ag"]):
             diffs.append((r, m))
-        if r["date"] != m["date"]:
+        if m["date"] is not None and r["date"] == m["date"]:
+            sus.discard(id(r))  # outra fonte confirma a data
+        if m["date"] is not None and r["date"] != m["date"]:
             if id(r) in sus and in_season(m["date"], m["season"]):
                 notes.append(f"{label(r['season'])} {r['home']} x {r['away']}: data {r['date']} -> {m['date']} ({src})")
                 r["date"] = m["date"]
@@ -547,12 +669,18 @@ def build(league, existing, blocks):
     stats = defaultdict(Counter)
     all_diffs = []
     secs = []
-    for loader in (load_fcsv, load_rsssf_ita, load_of, load_fd):
+    for loader in (load_fcsv, load_rsssf_ita, load_rsssf_fra, load_of, load_fd):
         sec = loader(cfg)
         if not sec:
             continue
-        rsssf = loader is load_rsssf_ita
-        map_names(sec, rows, clubs, existing, log, strict=not rsssf)
+        rsssf = loader in (load_rsssf_ita, load_rsssf_fra)
+        if loader is load_rsssf_fra:
+            sec, bad = map_crosstable(sec, rows, clubs)
+            if bad:
+                log.append("RSSSF (cruzamento) ignorado em " + ", ".join(label(s) for s in bad)
+                           + ": menos de 80% dos placares batem, nomes não casaram")
+        else:
+            map_names(sec, rows, clubs, existing, log, strict=not rsssf)
         secs.append(sec)
         all_diffs += [(r, m) for r, m in crosscheck(rows, sec, sus, stats, notes, whole_seasons=not rsssf)]
     # Jogo do engsoccerdata com data impossível que nenhuma fonte tem e cujo
@@ -567,6 +695,33 @@ def build(league, existing, blocks):
                      "removido (data impossível, confronto repetido ou time de outra temporada, não está em outra fonte)")
         sus.discard(id(r))
     rows[:] = [r for r in rows if not any(r is d for d in dropped)]
+    # Desempates (spareggi, playoffs de vaga): em temporada de turno e
+    # returno, o 3º encontro de um par em diante sai. O engsoccerdata traz
+    # alguns e não outros; ficam todos de fora para a liga ser só o
+    # campeonato de pontos corridos.
+    by_season = defaultdict(list)
+    for r in rows:
+        by_season[r["season"]].append(r)
+    extra = []
+    for season, rs in by_season.items():
+        if any(r.get("stage") for r in rs):
+            continue
+        teams = {r["home"] for r in rs} | {r["away"] for r in rs}
+        games = Counter(t for r in rs for t in (r["home"], r["away"]))
+        base = 2 * (len(teams) - 1)
+        if sum(1 for t in teams if games[t] == base) < len(teams) / 2:
+            continue
+        meet = defaultdict(list)
+        for r in sorted(rs, key=lambda r: r["date"]):
+            meet[frozenset((r["home"], r["away"]))].append(r)
+        for lst in meet.values():
+            extra += lst[2:]
+        # playoff contra time de fora da liga (só aparece em um ou dois jogos)
+        extra += [r for r in rs if min(games[r["home"]], games[r["away"]]) <= 2 and r not in extra]
+    for r in extra:
+        notes.append(f"{label(r['season'])} {r['date']} {r['home']} x {r['away']} {r['hg']}-{r['ag']}: "
+                     f"removido (jogo de desempate, fora do turno e returno; {r['source']})")
+    rows[:] = [r for r in rows if not any(r is x for x in extra)]
     # Placar divergente. Ordem: correção manual (FIXES); a versão com que a
     # tabela final do RSSSF bate; as outras fontes, quando concordam entre si e
     # nenhuma confirma o engsoccerdata. Ida e volta trocadas (A x B de uma
@@ -625,6 +780,8 @@ def build(league, existing, blocks):
         r["status"], r["note"] = fix.get("status", ""), fix["note"]
         score_notes.append(tag + f"correção manual -> {r['hg']}-{r['ag']} {r['date']} ({fix['note']})")
     still = [r for r in rows if id(r) in sus]
+    for r in still:
+        r["note"] = (r.get("note", "") + "; " if r.get("note") else "") + "data incerta (engsoccerdata, sem outra fonte)"
     return dict(rows=rows, clubs=clubs, stats=stats, notes=notes, score_notes=score_notes,
                 still_sus=still, excluded=excluded, log=log)
 
@@ -673,7 +830,11 @@ def report(league, res, out, checks):
         L.append(f"| {label(s)} | {seasons[s]} | " + " | ".join(cells) + " |")
     bad = {s: c for s, c in checks.items() if c[1]}
     if bad:
-        L += ["", "## Tabela final diferente do RSSSF", ""]
+        L += ["", "## Tabela final diferente do RSSSF", "",
+              "Times cuja campanha (J V E D GP GC) não aparece na tabela do RSSSF. Os casos conferidos são "
+              "resultados do tribunal (a tabela usa o placar do tribunal; aqui vale o de campo), erro de "
+              "digitação na página do RSSSF ou temporada com mais de uma fase. Onde um placar só faria a "
+              "tabela bater, ele aparece abaixo, para conferência.", ""]
         for s, (_, b) in sorted(bad.items()):
             L.append(f"- {label(s)}: " + "; ".join(f"{t} {x[0]}" for t, x in b))
             for r, (hg, ag) in res["proposals"].get(s, []):
@@ -715,7 +876,9 @@ def main():
         entry = {"slug": league, "name": LEAGUES[league]["name"], "short": LEAGUES[league]["short"],
                  "country": COUNTRY[league][0], "flag": LEAGUES[league]["flag"],
                  "since": min(r["season"] for r in out)}
-        leagues = [lg for lg in leagues if lg["slug"] != league] + [entry]
+        old = next((lg for lg in leagues if lg["slug"] == league), {})
+        entry = {**old, **entry, "split": True, "fem": True}  # temporada 2024/25; "da Premier League"
+        leagues = [entry if lg["slug"] == league else lg for lg in leagues] if old else leagues + [entry]
         lp.write_text("[\n" + ",\n".join("  " + json.dumps(lg, ensure_ascii=False) for lg in leagues) + "\n]\n",
                       encoding="utf-8")
         bad = sum(1 for c in checks.values() if c[1])

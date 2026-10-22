@@ -20,9 +20,11 @@ export function previewBase(pathname: string): string | undefined {
   return depth > 0 ? "../".repeat(depth) : "./";
 }
 
-/**
- * Página de uma temporada. A prévia tem limite de arquivos, então lá as
- * temporadas são desenhadas no navegador por uma página só.
- */
+// Páginas de temporada, placar e time. A prévia tem limite de arquivos, então
+// lá cada tipo é uma página só, desenhada no navegador a partir da query.
 export const seasonHref = (liga: string, season: number) =>
   PREVIEW ? href(`temporada?liga=${liga}&ano=${season}`) : href(`${liga}/scorigamis/${season}`);
+export const scorePageHref = (liga: string, key: string) =>
+  PREVIEW ? href(`placar?liga=${liga}&p=${key}`) : href(`${liga}/placar/${key}`);
+export const clubPageHref = (liga: string, slug: string) =>
+  PREVIEW ? href(`time?liga=${liga}&t=${slug}`) : href(`${liga}/time/${slug}`);

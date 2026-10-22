@@ -1,111 +1,19 @@
 ---
 import Base from "../../../layouts/Base.astro";
-import { buildCells, gridSize, scoreKey, unseenPlausible, yearsSince, type Match } from "../../../lib/core";
 import { serverCtx } from "../../../lib/ctx";
-import { lastDate, league, leagueMatches, leagues, g } from "../../../lib/data";
-import { href, seasonHref } from "../../../lib/links";
-import { fmtInt, fmtLong, gridHtml, legendHtml, matchLine, plural, resultLine, times } from "../../../lib/render";
+import { league, leagueMatches, leagues } from "../../../lib/data";
+import { PREVIEW } from "../../../lib/links";
+import { scoreKeys, scorePage } from "../../../lib/pages";
 
 export function getStaticPaths() {
-  return leagues.flatMap((l) => {
-    const n = Math.max(gridSize(leagueMatches(l.slug)), 10);
-    const paths = [];
-    for (let a = 0; a <= n; a++) for (let b = 0; b <= a; b++) paths.push({ params: { liga: l.slug, placar: `${a}-${b}` } });
-    return paths;
-  });
+  if (PREVIEW) return [];
+  return leagues.flatMap((l) => scoreKeys(leagueMatches(l.slug)).map((placar) => ({ params: { liga: l.slug, placar } })));
 }
 
 const { liga, placar } = Astro.params as { liga: string; placar: string };
-const [a, b] = placar.split("-").map(Number);
-const lg = league(liga);
-const all = leagueMatches(liga);
-const ctx = serverCtx(liga);
-const cells = buildCells(all, "norm");
-const games: Match[] = all.filter((m) => scoreKey(m) === placar).reverse();
-const count = games.length;
-const first = games[games.length - 1];
-const last = games[0];
-const years = last ? yearsSince(last.date, lastDate) : 0;
-const homeWins = games.filter((m) => m.hg > m.ag).length;
-const awayWins = games.filter((m) => m.ag > m.hg).length;
-const unseen = count ? undefined : unseenPlausible(all, cells, 40).find((u) => u.a === a && u.b === b);
-const LIMIT = 100;
-
-// Placares vizinhos: a grade 3×3 em volta, com o próprio placar no meio.
-const nearby: { a: number; b: number; count: number }[] = [];
-for (let da = 1; da >= -1; da--)
-  for (let db = -1; db <= 1; db++) {
-    const na = a + da;
-    const nb = b + db;
-    if (na >= 0 && nb >= 0 && nb <= na) nearby.push({ a: na, b: nb, count: cells.get(`${na}-${nb}`)?.count ?? 0 });
-  }
-
-const title = `Já houve ${a}–${b} ${g(lg, "no", "na")} ${lg.short}?`;
-const description = count
-  ? `Sim: o placar ${a}–${b} aconteceu ${plural(count, "vez", "vezes")} ${g(lg, "no", "na")} ${lg.name}, a última em ${fmtLong(last.date)}.`
-  : `Nunca: o placar ${a}–${b} ainda não aconteceu ${g(lg, "no", "na")} ${lg.name}.`;
-const gameLine = (m: Match) =>
-  `<a href="${seasonHref(liga, m.season)}">${fmtLong(m.date)}</a>, ${resultLine(ctx, m)} (${matchLine(ctx, m, false)})`;
+const page = scorePage(serverCtx(liga), league(liga), leagueMatches(liga), placar);
 ---
 
-<Base title={title} description={description} liga={liga}>
-  <h1>{title}</h1>
-  <p class="answer">{count ? `Sim, ${times(count)}.` : "Nunca."}</p>
-  {count === 1 && <p>A única vez: <Fragment set:html={gameLine(first)} />.</p>}
-  {
-    count > 1 && (
-      <>
-        <p>A primeira vez: <Fragment set:html={gameLine(first)} />.</p>
-        <p>
-          A última vez: <Fragment set:html={gameLine(last)} />
-          {years >= 1 ? `, há ${plural(years, "ano", "anos")}` : ""}.
-        </p>
-        {a !== b && (
-          <p class="muted">
-            Vitórias do mandante: {fmtInt(homeWins)}. Vitórias do visitante: {fmtInt(awayWins)}.
-          </p>
-        )}
-      </>
-    )
-  }
-  {
-    unseen && (
-      <p>
-        Seria uma scorigami. Pela média de gols {g(lg, "do", "da")} {lg.short}, a chance de um jogo terminar {a}–{b} é de cerca de 1 em{" "}
-        {fmtInt(Math.round(1 / unseen.probability))}.
-      </p>
-    )
-  }
-
-  <div style="margin-top:1.5rem">
-    <Fragment set:html={gridHtml(ctx, all, { mode: "norm", ring: new Set([placar]) })} />
-    <Fragment set:html={legendHtml()} />
-  </div>
-
-  <h2>Placares próximos</h2>
-  <ol class="list">
-    {nearby.map((n) =>
-      n.a === a && n.b === b ? (
-        <li><span class="score">{n.a}–{n.b}</span> {times(n.count)}</li>
-      ) : (
-        <li><a class="score" href={href(`${liga}/placar/${n.a}-${n.b}`)}>{n.a}–{n.b}</a> {times(n.count)}</li>
-      ),
-    )}
-  </ol>
-
-  {
-    count > 1 && (
-      <>
-        <h2>Todos os jogos {count > LIMIT && <span class="muted">(os {LIMIT} mais recentes)</span>}</h2>
-        <ol class="list">
-          {games.slice(0, LIMIT).map((m) => (
-            <li>
-              <span class="date">{fmtLong(m.date)}</span> <Fragment set:html={matchLine(ctx, m)} />
-              {m.note && <span class="muted"> · {m.note}</span>}
-            </li>
-          ))}
-        </ol>
-      </>
-    )
-  }
+<Base title={page.title} description={page.description} liga={liga}>
+  <Fragment set:html={page.html} />
 </Base>

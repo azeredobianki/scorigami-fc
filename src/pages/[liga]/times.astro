@@ -1,7 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { club, league, leagueMatches, leagues, seasonOf, g } from "../../lib/data";
-import { href } from "../../lib/links";
+import { clubPageHref } from "../../lib/links";
 
 export function getStaticPaths() {
   return leagues.map((l) => ({ params: { liga: l.slug } }));
@@ -10,7 +10,7 @@ export function getStaticPaths() {
 const { liga } = Astro.params as { liga: string };
 const lg = league(liga);
 const all = leagueMatches(liga);
-const current = Math.max(...all.map((m) => m.season));
+const current = all.reduce((x, m) => Math.max(x, m.season), 0);
 const S = (s: number) => seasonOf(liga, s);
 const seasonsOf = new Map<string, Set<number>>();
 for (const m of all)
@@ -53,7 +53,7 @@ const groups = [
         <ul class="team-list">
           {g.rows.map((r) => (
             <li>
-              <a href={href(`${liga}/time/${r.slug}`)}>{r.name}</a>
+              <a href={clubPageHref(liga, r.slug)}>{r.name}</a>
               <span class="years">{r.years} · {r.count} {r.count === 1 ? "temporada" : "temporadas"}</span>
               {r.old.length > 0 && <span class="formerly">Antes: {r.old.join(", ")}</span>}
             </li>

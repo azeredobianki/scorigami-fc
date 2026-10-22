@@ -1,10 +1,9 @@
 ---
 import Base from "../../../layouts/Base.astro";
-import { hi, lo, scorigamis } from "../../../lib/core";
 import { serverCtx } from "../../../lib/ctx";
-import { league, leagueMatches, leagues, seasonOf, g } from "../../../lib/data";
-import { href, PREVIEW, seasonHref } from "../../../lib/links";
-import { fmtInt, gridHtml, legendHtml, plural, scorigamiListHtml } from "../../../lib/render";
+import { league, leagueMatches, leagues } from "../../../lib/data";
+import { PREVIEW } from "../../../lib/links";
+import { seasonPage } from "../../../lib/pages";
 
 export function getStaticPaths() {
   if (PREVIEW) return [];
@@ -15,47 +14,19 @@ export function getStaticPaths() {
 
 const { liga, ano } = Astro.params as { liga: string; ano: string };
 const season = Number(ano);
-const lg = league(liga);
 const all = leagueMatches(liga);
-const ctx = serverCtx(liga);
-const list = scorigamis(all);
-const seasons = [...new Set(all.map((m) => m.season))].sort((a, b) => a - b);
-const counts = seasons.map((s) => list.filter((m) => m.season === s).length);
-const mine = list.filter((m) => m.season === season);
-const rank = 1 + counts.filter((n) => n > mine.length).length;
-const games = all.filter((m) => m.season === season);
-const stages = [...new Set(games.map((m) => m.stage?.split(" - ")[0]).filter((s) => s && /Taça|Robertão/.test(s)))];
-const before = all.filter((m) => m.season <= season);
-const idx = seasons.indexOf(season);
-const prev = seasons[idx - 1];
-const next = seasons[idx + 1];
-const S = (s: number) => seasonOf(liga, s);
+// Fases do Brasileirão antigo (Taça Brasil, Robertão) quando a temporada teve mais de uma competição.
+const stages = [
+  ...new Set(
+    all
+      .filter((m) => m.season === season)
+      .map((m) => m.stage?.split(" - ")[0])
+      .filter((s): s is string => !!s && /Taça|Robertão/.test(s)),
+  ),
+];
+const page = seasonPage(serverCtx(liga), league(liga), all, season, stages);
 ---
 
-<Base
-  title={`Scorigamis ${g(lg, "do", "da")} ${lg.short} ${S(season)}`}
-  description={`${plural(mine.length, "scorigami", "scorigamis")} ${g(lg, "no", "na")} ${lg.name} ${S(season)}: os placares que aconteceram pela primeira vez.`}
-  active="scorigamis"
-  liga={liga}
->
-  <a class="back" href={href(`${liga}/scorigamis`)}>← Todas as temporadas</a>
-  <h1>{lg.short} {S(season)}</h1>
-  {stages.length > 0 && <p class="muted">{stages.join(" e ")}</p>}
-  <p class="answer">{mine.length ? plural(mine.length, "scorigami", "scorigamis") : "Nenhuma scorigami"}</p>
-  <p class="muted">
-    {rank}ª de {seasons.length} temporadas em placares novos · {fmtInt(games.length)} jogos
-  </p>
-
-  {mine.length > 0 && <Fragment set:html={scorigamiListHtml(ctx, mine)} />}
-
-  <div style="margin-top:1.5rem">
-    <Fragment set:html={gridHtml(ctx, before, { mode: "norm", ring: new Set(mine.map((m) => `${hi(m)}-${lo(m)}`)) })} />
-    <Fragment set:html={legendHtml()} />
-  </div>
-  <p class="muted">O gráfico mostra todos os jogos até o fim de {S(season)}. Contornadas: as scorigamis da temporada.</p>
-
-  <nav class="pager">
-    {prev ? <a href={seasonHref(liga, prev)}>← {S(prev)}</a> : <span />}
-    {next ? <a href={seasonHref(liga, next)}>{S(next)} →</a> : <span />}
-  </nav>
+<Base title={page.title} description={page.description} active="scorigamis" liga={liga}>
+  <Fragment set:html={page.html} />
 </Base>

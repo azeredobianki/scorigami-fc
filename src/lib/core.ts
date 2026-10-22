@@ -184,3 +184,6 @@ export function forClub(m: Match, club: string): { gf: number; ga: number; opp: 
 export function seasonLabel(season: number, split?: boolean): string {
   return split ? `${season}/${String(season + 1).slice(2)}` : String(season);
 }
+
+/** Escolhe a forma masculina ou feminina conforme a liga: g(lg, "do", "da"). */
+export const g = (lg: { fem?: boolean }, masc: string, fem: string) => (lg.fem ? fem : masc);

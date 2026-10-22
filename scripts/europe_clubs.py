@@ -64,7 +64,7 @@ DISPLAY = {
         "Genoa CFC": "Genoa", "Lazio Roma": "Lazio", "AC Venezia": "Venezia", "Parma FC": "Parma",
         "Vicenza Calcio": "Vicenza", "Salernitana Calcio 1919": "Salernitana", "FC Messina": "Messina",
         "Sampierdarenese": "Sampierdarenese", "US Livorno": "Livorno", "US Alessandria 1912": "Alessandria",
-        "Inter": "Internazionale", "AS Varese 1910": "Varese", "Calcio Lecco 1912": "Lecco",
+        "Inter": "Internazionale", "Juventus": "Juventus FC", "AS Varese 1910": "Varese", "Calcio Lecco 1912": "Lecco",
         "SPAL 1907 Ferrara": "SPAL", "Genova 1893 Circolo del Calcio": "Genova 1893",
     },
     "bundesliga": {
@@ -102,7 +102,15 @@ ALIASES = {
 # Correções manuais, por (temporada, mandante, visitante), com a fonte na nota.
 # score: placar de campo; drop: tira o jogo; status/note vão para o CSV.
 FIXES = {
+    "ligue-1": {
+        (2013, "fc-nantes", "sc-bastia"): dict(
+            score=(2, 0), status="resultado alterado", note="2-0 em campo; vitória dada ao Bastia (Nantes escalou suspenso)"),
+        (2016, "sc-bastia", "olympique-lyonnais"): dict(
+            drop=True, note="interrompido no intervalo (0-0) por invasão; resultado dado no tribunal"),
+    },
     "serie-a": {
+        (1989, "atalanta", "ssc-napoli"): dict(
+            score=(0, 0), status="resultado alterado", note="0-0 em campo; 0-2 para o Napoli no tribunal (Alemão atingido por moeda)"),
         (2020, "hellas-verona", "as-roma"): dict(
             score=(0, 0), status="resultado alterado", note="0-0 em campo; 3-0 para o Verona no tribunal (Roma escalou jogador irregular)"),
     },

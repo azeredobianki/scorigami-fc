@@ -21,7 +21,7 @@ const clubGroups = leagues.map((l) => {
 
 <Base
   title="Scorigami FC"
-  description="Todos os placares finais da história do Brasileirão e da Premier League em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
+  description="Todos os placares finais da história do Brasileirão e das cinco grandes ligas europeias em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
   active="grafico"
 >
   <form class="bar" id="filters" onsubmit="return false" aria-label="Filtros do gráfico">
@@ -56,9 +56,9 @@ const clubGroups = leagues.map((l) => {
 
   <h2>O que é Scorigami?</h2>
   <p>
-    Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e da Premier
-    League, contando a antiga First Division desde 1888, além de todos os que ainda não aconteceram. Escolha uma
-    competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes. O site acompanha cada placar
+    Este gráfico mostra todos os placares finais da história do Brasileirão, desde a Taça Brasil de 1959, e das cinco
+    grandes ligas europeias: Premier League (desde 1888), La Liga, Serie A, Bundesliga e Ligue 1. Também mostra todos os
+    placares que ainda não aconteceram. Escolha uma competição no filtro para ver só ela. Uma <b>scorigami</b> é um placar que nunca tinha acontecido antes. O site acompanha cada placar
     novo e quantas vezes cada um já se repetiu. A ideia vem do <a href="https://nflscorigami.com/">NFL Scorigami</a>, criado
     por Jon Bois.
   </p>
@@ -74,7 +74,7 @@ const clubGroups = leagues.map((l) => {
 
   <h2>Últimas scorigamis</h2>
   <div id="recent" set:html={scorigamiListHtml(ctx, recent)} />
-  <a class="more" href={href(`${leagues[0].slug}/scorigamis`)}>Todas as scorigamis, recentes e por temporada →</a>
+  <a class="more" id="all-scorigamis" href={href(`${leagues[0].slug}/scorigamis`)}>Todas as scorigamis, recentes e por temporada →</a>
 
   <h2>Destaques</h2>
   <div id="highlights" set:html={highlightsHtml(ctx, matches)} />

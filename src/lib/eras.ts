@@ -17,6 +17,10 @@ const PHASES: Record<string, { id: string; label: string; from: number; to?: num
     { id: "premier-league", label: "Premier League (1992/93–)", from: 1992 },
     { id: "first-division", label: "First Division (1888/89–1991/92)", from: 1888, to: 1991 },
   ],
+  "ligue-1": [
+    { id: "ligue-1", label: "Ligue 1 (2002/03–)", from: 2002 },
+    { id: "division-1", label: "Division 1 (1938/39–2001/02)", from: 1938, to: 2001 },
+  ],
 };
 
 export function eras(seasons: number[], liga = ""): Era[] {

@@ -3,6 +3,7 @@
 import { buildCells, gridSize, scorigamis, type Match, type Mode } from "../lib/core";
 import { eras, type Era } from "../lib/eras";
 import { fmtInt, highlightsHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
+import { href } from "../lib/links";
 import { loadData } from "./client-data";
 import { paintGrid } from "./paint";
 
@@ -56,6 +57,7 @@ export async function initHome() {
     $("counter").innerHTML = `Exibindo <b>${fmtInt(shown.length)}</b> / ${fmtInt(data.matches.length)} jogos`;
     paintGrid($("grid"), ctx, shown, { mode, size: gridSize(inLeague) });
     $("recent").innerHTML = scorigamiListHtml(ctx, recent, mode);
+    $("all-scorigamis").setAttribute("href", href(`${ctx.linkLeague}/scorigamis`));
     $("top").innerHTML = topScoresHtml(ctx, buildCells(shown, mode));
     $("highlights").innerHTML = highlightsHtml(ctx, shown, inLeague.filter(inEra));
 
