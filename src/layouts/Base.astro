@@ -1,0 +1,58 @@
+---
+import { href, previewBase } from "../lib/links";
+import "../styles/global.css";
+import { lastDate, leagues } from "../lib/data";
+import { fmtDate } from "../lib/render";
+
+interface Props {
+  title: string;
+  description: string;
+  active?: "grafico" | "scorigamis" | "times" | "timelapse" | "sobre";
+}
+const { title, description, active } = Astro.props;
+const liga = leagues[0].slug;
+const nav = [
+  { id: "grafico", label: "Gráfico", href: href("") },
+  { id: "scorigamis", label: "Scorigamis", href: href(`${liga}/scorigamis`) },
+  { id: "times", label: "Times", href: href(`${liga}/times`) },
+  { id: "timelapse", label: "Time-lapse", href: href("timelapse") },
+  { id: "sobre", label: "Sobre", href: href("sobre") },
+];
+const fullTitle = title === "Scorigami FC" ? title : `${title} · Scorigami FC`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const base = previewBase(Astro.url.pathname);
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    {base && <base href={base} />}
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@ScorigamiFC" />
+    <link rel="icon" href={href("favicon.svg").replace(/\.html$/, "")} type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="site">
+      <a class="brand" href={href("")}><span class="ball" aria-hidden="true">⚽</span> Scorigami <b>FC</b></a>
+      <nav>
+        {nav.map((n) => <a href={n.href} aria-current={active === n.id ? "page" : undefined}>{n.label}</a>)}
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site">
+      <p>Último jogo na base: {fmtDate(lastDate)}. Dados: <a href={href("sobre#fontes")}>fontes e metodologia</a>.</p>
+      <p>Inspirado no <a href="https://www.scorigaminba.com/">Scorigami NBA</a> e no conceito criado por Jon Bois.</p>
+    </footer>
+  </body>
+</html>

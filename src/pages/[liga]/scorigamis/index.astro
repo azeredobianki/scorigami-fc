@@ -1,0 +1,79 @@
+---
+import { href } from "../../../lib/links";
+import Base from "../../../layouts/Base.astro";
+import { scorigamis } from "../../../lib/core";
+import { serverCtx } from "../../../lib/ctx";
+import { league, leagueMatches, leagues } from "../../../lib/data";
+import { plural, scorigamiListHtml } from "../../../lib/render";
+
+export function getStaticPaths() {
+  return leagues.map((l) => ({ params: { liga: l.slug } }));
+}
+
+const { liga } = Astro.params as { liga: string };
+const lg = league(liga);
+const all = leagueMatches(liga);
+const list = scorigamis(all);
+const ctx = serverCtx(liga);
+const seasons = [...new Set(all.map((m) => m.season))].sort((a, b) => a - b);
+const perSeason = seasons.map((s) => ({
+  season: s,
+  count: list.filter((m) => m.season === s).length,
+  games: all.filter((m) => m.season === s).length,
+}));
+const max = Math.max(1, ...perSeason.map((p) => p.count));
+---
+
+<Base
+  title={`Scorigamis do ${lg.short}`}
+  description={`Todos os ${list.length} placares inéditos da história do ${lg.name}, temporada por temporada.`}
+  active="scorigamis"
+>
+  <p class="muted">{lg.flag} {lg.name}</p>
+  <h1>Scorigamis do {lg.short}</h1>
+  <p class="lede">
+    {plural(list.length, "placar diferente já aconteceu", "placares diferentes já aconteceram")} em {perSeason.reduce((s, p) => s + p.games, 0).toLocaleString("pt-BR")} jogos
+    desde {seasons[0]}. Cada um teve uma primeira vez: essas são as scorigamis.
+  </p>
+
+  <h2>Scorigamis por temporada</h2>
+  <div class="season-chart" role="img" aria-label="Número de scorigamis por temporada">
+    {perSeason.map((p) => (
+      <a
+        href={href(`${liga}/scorigamis/${p.season}`)}
+        style={`height:${Math.max(p.count ? 4 : 0, (p.count / max) * 100)}%`}
+        title={`${p.season}: ${plural(p.count, "scorigami", "scorigamis")}`}
+        aria-label={`${p.season}: ${plural(p.count, "scorigami", "scorigamis")}`}
+      />
+    ))}
+  </div>
+  <div class="season-axis"><span>{seasons[0]}</span><span>{seasons[seasons.length - 1]}</span></div>
+  <p class="muted">
+    A primeira temporada da base conta todos os placares como inéditos. Com o histórico desde 1959, as temporadas modernas
+    passam a mostrar só as primeiras vezes de verdade.
+  </p>
+
+  <div class="split">
+    <section>
+      <h2>Mais recentes</h2>
+      <Fragment set:html={scorigamiListHtml(ctx, list.slice(-25).reverse())} />
+    </section>
+    <aside class="panel">
+      <h2>Temporadas</h2>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>Temporada</th><th class="n">Scorigamis</th><th class="n">Jogos</th></tr></thead>
+          <tbody>
+            {[...perSeason].reverse().map((p) => (
+              <tr>
+                <td><a href={href(`${liga}/scorigamis/${p.season}`)}>{p.season}</a></td>
+                <td class="n">{p.count}</td>
+                <td class="n">{p.games}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </aside>
+  </div>
+</Base>

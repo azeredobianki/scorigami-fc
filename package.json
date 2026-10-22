@@ -1,0 +1,21 @@
+{
+  "name": "scorigamifc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ingest": "python3 scripts/ingest.py",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "node --test --experimental-strip-types src/lib/*.test.ts",
+    "build:preview": "PUBLIC_PREVIEW=1 astro build --outDir dist-preview && node scripts/preview-fix.mjs dist-preview"
+  },
+  "dependencies": {
+    "astro": "^5.18.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@types/node": "^26.6.5",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,49 @@
+---
+import Base from "../layouts/Base.astro";
+import { leagues } from "../lib/data";
+---
+
+<Base
+  title="Time-lapse"
+  description="Veja o gráfico de placares do futebol brasileiro se preencher temporada a temporada."
+  active="timelapse"
+>
+  <h1>Time-lapse</h1>
+  <p class="lede">O gráfico se preenche temporada a temporada. As casas contornadas são as scorigamis daquele ano.</p>
+
+  <form class="filters" id="tl-filters" onsubmit="return false">
+    <label>Competição
+      <select name="liga">
+        <option value="">Todas as ligas</option>
+        {leagues.map((l) => <option value={l.slug}>{l.flag} {l.short}</option>)}
+      </select>
+    </label>
+  </form>
+
+  <div class="player">
+    <button type="button" class="play" id="tl-play">▶ Play</button>
+    <input type="range" id="tl-range" min="0" max="0" value="0" aria-label="Temporada" />
+  </div>
+
+  <div class="split">
+    <section>
+      <div id="tl-grid"><p class="muted">Carregando…</p></div>
+    </section>
+    <aside>
+      <section class="panel">
+        <div class="year-big" id="tl-year">–</div>
+        <p class="counter" id="tl-counter"></p>
+        <p id="tl-milestone" class="lede"></p>
+      </section>
+      <section class="panel">
+        <h2>Scorigamis do ano</h2>
+        <div id="tl-list"></div>
+      </section>
+    </aside>
+  </div>
+
+  <script>
+    import { initTimelapse } from "../scripts/timelapse";
+    initTimelapse();
+  </script>
+</Base>

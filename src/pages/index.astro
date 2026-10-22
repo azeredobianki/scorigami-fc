@@ -1,0 +1,105 @@
+---
+import { href } from "../lib/links";
+import Base from "../layouts/Base.astro";
+import { buildCells, scorigamis } from "../lib/core";
+import { serverCtx } from "../lib/ctx";
+import { clubs, lastDate, leagues, matches } from "../lib/data";
+import { eras } from "../lib/eras";
+import { fmtDate, fmtInt, gridHtml, highlightsHtml, legendHtml, scorigamiListHtml, topScoresHtml } from "../lib/render";
+
+const ctx = serverCtx();
+const cells = buildCells(matches, "norm");
+const recent = scorigamis(matches, "norm").slice(-5).reverse();
+const seasons = [...new Set(matches.map((m) => m.season))].sort((a, b) => a - b);
+const eraList = eras(seasons);
+const playing = new Set(matches.flatMap((m) => [m.home, m.away]));
+const clubOptions = clubs.filter((c) => playing.has(c.slug)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+---
+
+<Base
+  title="Scorigami FC"
+  description="Todos os placares da história do Brasileirão em um gráfico: quais já aconteceram, quantas vezes e quais nunca aconteceram."
+  active="grafico"
+>
+  <h1>Já deu esse placar?</h1>
+  <p class="lede">
+    <b>Scorigami</b> é um placar final que nunca tinha acontecido antes. O gráfico mostra todos os placares já vistos no
+    futebol, e as casas vazias são os que ainda esperam pela primeira vez.
+  </p>
+
+  <form class="filters" id="filters" onsubmit="return false">
+    <label>Competição
+      <select name="liga">
+        <option value="">Todas as ligas</option>
+        {leagues.map((l) => <option value={l.slug}>{l.flag} {l.short}</option>)}
+      </select>
+    </label>
+    <label>Time
+      <select name="time">
+        <option value="">Todos os times</option>
+        {clubOptions.map((c) => <option value={c.slug}>{c.name}</option>)}
+      </select>
+    </label>
+    <label>Era
+      <select name="era">
+        {eraList.map((e) => <option value={e.id}>{e.label}</option>)}
+      </select>
+    </label>
+    <div class="toggle" role="group" aria-label="Tipo de grid">
+      <button type="button" data-mode="norm" aria-pressed="true">Maior × menor</button>
+      <button type="button" data-mode="mando" aria-pressed="false">Mandante × visitante</button>
+    </div>
+  </form>
+
+  <p class="counter" id="counter">
+    Exibindo <b>{fmtInt(matches.length)}</b> de {fmtInt(matches.length)} jogos · {fmtInt(cells.size)} placares diferentes ·
+    último jogo em {fmtDate(lastDate)}
+  </p>
+
+  <div class="split">
+    <section aria-label="Gráfico de placares">
+      <div id="grid" set:html={gridHtml(ctx, matches, { mode: "norm" })} />
+      <Fragment set:html={legendHtml()} />
+    </section>
+    <aside>
+      <section class="panel">
+        <h2>Últimas scorigamis</h2>
+        <div id="recent" set:html={scorigamiListHtml(ctx, recent)} />
+        <p><a href={href(`${leagues[0].slug}/scorigamis`)}>Ver todas →</a></p>
+      </section>
+      <section class="panel">
+        <h2>Placares mais comuns</h2>
+        <div id="top" set:html={topScoresHtml(ctx, cells, matches.length)} />
+      </section>
+    </aside>
+  </div>
+
+  <h2>Destaques</h2>
+  <div id="highlights" set:html={highlightsHtml(ctx, matches)} />
+
+  <div class="prose">
+    <h2>O que é scorigami?</h2>
+    <p>
+      O termo foi criado pelo jornalista Jon Bois para a NFL: um jogo termina em scorigami quando o placar final nunca
+      tinha acontecido antes na história da liga. Aqui a ideia vale para o futebol, a começar pelo Brasileirão.
+    </p>
+    <h2>Como ler o gráfico</h2>
+    <ul>
+      <li>
+        No modo <b>maior × menor</b>, cada linha é o placar de quem fez mais gols e cada coluna o de quem fez menos. Empates ficam
+        na diagonal. 3–1 e 1–3 caem na mesma casa.
+      </li>
+      <li>
+        No modo <b>mandante × visitante</b>, as linhas são os gols do mandante e as colunas os do visitante, então 3–1 e 1–3 são
+        casas diferentes.
+      </li>
+      <li>Quanto mais escura a casa, mais vezes o placar aconteceu. As casas tracejadas nunca aconteceram.</li>
+      <li>Clique numa casa para ver todos os jogos com aquele placar.</li>
+    </ul>
+  </div>
+
+  <script>
+    import { initHome } from "../scripts/home";
+    initHome();
+  </script>
+</Base>

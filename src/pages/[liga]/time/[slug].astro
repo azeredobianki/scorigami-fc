@@ -1,0 +1,144 @@
+---
+import { href } from "../../../lib/links";
+import Base from "../../../layouts/Base.astro";
+import { buildCells, exclusiveScores, forClub, gridSize, scorigamis, type Match } from "../../../lib/core";
+import { serverCtx } from "../../../lib/ctx";
+import { club, league, leagueMatches, leagues } from "../../../lib/data";
+import { fmtDate, fmtInt, gridHtml, legendHtml, matchLine, plural, scorigamiListHtml } from "../../../lib/render";
+
+export function getStaticPaths() {
+  return leagues.flatMap((l) =>
+    [...new Set(leagueMatches(l.slug).flatMap((m) => [m.home, m.away]))].map((slug) => ({ params: { liga: l.slug, slug } })),
+  );
+}
+
+const { liga, slug } = Astro.params as { liga: string; slug: string };
+const lg = league(liga);
+const c = club(slug);
+const all = leagueMatches(liga);
+const ctx = serverCtx(liga);
+const mine = all.filter((m) => m.home === slug || m.away === slug);
+const leagueCells = buildCells(all);
+const myCells = buildCells(mine);
+
+let w = 0, d = 0, l = 0, gf = 0, ga = 0;
+for (const m of mine) {
+  const r = forClub(m, slug);
+  gf += r.gf;
+  ga += r.ga;
+  if (r.gf > r.ga) w++;
+  else if (r.gf === r.ga) d++;
+  else l++;
+}
+const pct = mine.length ? ((w / mine.length) * 100).toFixed(1).replace(".", ",") : "0";
+const myScorigamis = scorigamis(all).filter((m) => m.home === slug || m.away === slug);
+const exclusive = exclusiveScores(all, leagueCells).find((e) => e.club === slug)?.scores ?? [];
+
+// Visão do clube: gols dele nas linhas, do adversário nas colunas.
+const perspective: Match[] = mine.map((m) => {
+  const r = forClub(m, slug);
+  return { ...m, hg: r.gf, ag: r.ga };
+});
+const size = gridSize(all);
+
+const byMargin = (sign: 1 | -1) =>
+  [...mine]
+    .filter((m) => sign * (forClub(m, slug).gf - forClub(m, slug).ga) > 0)
+    .sort((x, y) => {
+      const rx = forClub(x, slug), ry = forClub(y, slug);
+      return sign * (ry.gf - ry.ga - (rx.gf - rx.ga)) || (sign > 0 ? ry.gf - rx.gf : ry.ga - rx.ga);
+    })[0];
+const bestWin = byMargin(1);
+const worstLoss = byMargin(-1);
+
+const rarity = [...myCells.values()].map((cell) => ({ cell, league: leagueCells.get(cell.key)!.count }));
+const rarest = [...rarity].sort((a, b) => a.league - b.league || b.cell.a + b.cell.b - (a.cell.a + a.cell.b)).slice(0, 10);
+const common = [...rarity].sort((a, b) => b.cell.count - a.cell.count).slice(0, 10);
+---
+
+<Base
+  title={`${c.name} no ${lg.short}`}
+  description={`Todos os placares do ${c.name} no ${lg.name}: ${plural(mine.length, "jogo", "jogos")}, ${plural(myCells.size, "placar diferente", "placares diferentes")} e ${plural(myScorigamis.length, "scorigami", "scorigamis")}.`}
+  active="times"
+>
+  <p class="muted"><a href={href(`${liga}/times`)}>Times do {lg.short}</a> · {c.state}</p>
+  <h1>{c.name}</h1>
+  {c.names && <p class="muted">Nomes na liga: {c.names.map((n) => `${n.name} (${n.from ?? "…"}–${n.to ?? "hoje"})`).join(", ")}</p>}
+
+  <div class="stats">
+    <div class="stat"><b>{fmtInt(mine.length)}</b><span>jogos</span></div>
+    <div class="stat"><b>{w}–{d}–{l}</b><span>V–E–D ({pct}% de vitórias)</span></div>
+    <div class="stat"><b>{fmtInt(gf)}–{fmtInt(ga)}</b><span>gols pró–contra</span></div>
+    <div class="stat"><b>{myCells.size}</b><span>placares diferentes</span></div>
+    <div class="stat"><b>{myScorigamis.length}</b><span>scorigamis</span></div>
+    <div class="stat"><b>{exclusive.length}</b><span>placares exclusivos</span></div>
+  </div>
+
+  <div class="split">
+    <section>
+      <h2>Placares do {c.name}</h2>
+      <Fragment
+        set:html={gridHtml(ctx, perspective, {
+          mode: "mando",
+          size,
+          ring: new Set(myScorigamis.map((m) => { const r = forClub(m, slug); return `${r.gf}-${r.ga}`; })),
+          labels: [`Gols do ${c.name}`, "Gols do adversário"],
+        })}
+      />
+      <Fragment set:html={legendHtml()} />
+      <p class="muted">Contornados: placares que foram scorigami em jogos do {c.name}.</p>
+    </section>
+    <aside>
+      <section class="panel">
+        <h2>Maior vitória e maior derrota</h2>
+        <ul class="games">
+          {bestWin && <li><span set:html={matchLine(ctx, bestWin)} /><span class="muted">{fmtDate(bestWin.date)}</span></li>}
+          {worstLoss && <li><span set:html={matchLine(ctx, worstLoss)} /><span class="muted">{fmtDate(worstLoss.date)}</span></li>}
+        </ul>
+      </section>
+      {
+        exclusive.length > 0 && (
+          <section class="panel">
+            <h2>Placares que só o {c.name} teve</h2>
+            <p class="chips">
+              {exclusive.map((e) => <a class="chip" href={href(`${liga}/placar/${e.key}`)}>{e.a}–{e.b}</a>)}
+            </p>
+          </section>
+        )
+      }
+    </aside>
+  </div>
+
+  <div class="split">
+    <section>
+      <h2>10 placares mais raros</h2>
+      <table class="data">
+        <thead><tr><th>Placar</th><th class="n">Jogos do clube</th><th class="n">Na liga</th></tr></thead>
+        <tbody>
+          {rarest.map((r) => (
+            <tr><td><a class="chip" href={href(`${liga}/placar/${r.cell.key}`)}>{r.cell.a}–{r.cell.b}</a></td><td class="n">{r.cell.count}</td><td class="n">{fmtInt(r.league)}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>10 placares mais comuns</h2>
+      <table class="data">
+        <thead><tr><th>Placar</th><th class="n">Clube</th><th class="n">% clube</th><th class="n">% liga</th></tr></thead>
+        <tbody>
+          {common.map((r) => (
+            <tr>
+              <td><a class="chip" href={href(`${liga}/placar/${r.cell.key}`)}>{r.cell.a}–{r.cell.b}</a></td>
+              <td class="n">{r.cell.count}</td>
+              <td class="n">{((r.cell.count / mine.length) * 100).toFixed(1).replace(".", ",")}%</td>
+              <td class="n">{((r.league / all.length) * 100).toFixed(1).replace(".", ",")}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <h2>Scorigamis do {c.name}</h2>
+  <Fragment set:html={scorigamiListHtml(ctx, [...myScorigamis].reverse())} />
+</Base>

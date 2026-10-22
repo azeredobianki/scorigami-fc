@@ -1,0 +1,51 @@
+---
+import Base from "../layouts/Base.astro";
+import { leagues, matches } from "../lib/data";
+import { fmtInt } from "../lib/render";
+
+const seasons = matches.map((m) => m.season);
+const from = Math.min(...seasons);
+const to = Math.max(...seasons);
+---
+
+<Base title="Sobre" description="O que é scorigami, o que conta como placar final e de onde vêm os dados do Scorigami FC." active="sobre">
+  <div class="prose">
+    <h1>Sobre o Scorigami FC</h1>
+    <p>
+      Scorigami é um placar final que nunca tinha acontecido antes na história de uma competição. O conceito foi criado por
+      Jon Bois para a NFL e ganhou versões para outros esportes, como o <a href="https://www.scorigaminba.com/">Scorigami NBA</a>.
+      O Scorigami FC leva a ideia para o futebol, começando pelo Brasileirão.
+    </p>
+
+    <h2>O que conta como placar final</h2>
+    <ul>
+      <li>Vale o placar de campo ao fim do jogo, incluindo a prorrogação quando houve.</li>
+      <li>Disputas de pênaltis não mudam o placar. Elas aparecem só como observação no jogo.</li>
+      <li>Jogos de mata-mata e finais entram normalmente.</li>
+      <li>W.O. e resultados alterados no tribunal ficam marcados. O placar que vale é o de campo, com nota.</li>
+      <li>Só entram jogos com data e placar confiáveis.</li>
+      <li>
+        Uma scorigami é medida dentro de cada liga: um placar inédito no Brasileirão é scorigami mesmo que já tenha acontecido em
+        outra competição.
+      </li>
+    </ul>
+
+    <h2>O que entra no Brasileirão</h2>
+    <p>
+      O histórico considera todas as edições reconhecidas pela CBF como Campeonato Brasileiro: a Taça Brasil (1959–1968), o
+      Torneio Roberto Gomes Pedrosa (1967–1970) e o Campeonato Brasileiro a partir de 1971.
+    </p>
+
+    <h2 id="fontes">Fontes</h2>
+    <p>A base atual tem {fmtInt(matches.length)} jogos de {from} a {to}, em {leagues.length === 1 ? "uma liga" : `${leagues.length} ligas`}.</p>
+    <ul>
+      <li><a href="https://github.com/adaoduque/Brasileirao_Dataset">Brasileirao_Dataset</a>, de Adão Duque: Série A de 2003 a 2024.</li>
+      <li><a href="https://github.com/openfootball/football.json">openfootball/football.json</a>: Série A de 2025 e 2026 (domínio público).</li>
+      <li><a href="https://rsssfbrasil.com/historical.htm">RSSSF Brasil</a>: edições de 1959 a 2002 (em carga).</li>
+    </ul>
+    <p>O total de jogos de cada temporada é conferido antes de publicar.</p>
+
+    <h2>Contato</h2>
+    <p>Achou um placar errado? Fale com a gente no X, em <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a>.</p>
+  </div>
+</Base>
