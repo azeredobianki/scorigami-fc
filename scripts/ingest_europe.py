@@ -23,7 +23,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from europe_clubs import ALIASES, COUNTRY, DISPLAY, FIXES, MERGE  # noqa: E402
+from europe_clubs import ALIASES, CLUB_COUNTRY, COUNTRY, DISPLAY, FIXES, MERGE  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw" / "europe"
@@ -46,13 +46,23 @@ LEAGUES = {
                        name="Bundesliga", short="Bundesliga", flag="🇩🇪"),
     "ligue-1": dict(es="france", fd="ligue-1", of="fr.1", fcsv=None,
                     name="Ligue 1", short="Ligue 1", flag="🇫🇷"),
+    "eredivisie": dict(es="holland", fd="eredivisie", of="nl.1", fcsv=None,
+                       name="Eredivisie", short="Eredivisie", flag="🇳🇱"),
+    "primeira-liga": dict(es="portugal", fd="primeira-liga", of="pt.1", fcsv=None,
+                          name="Primeira Liga", short="Primeira Liga", flag="🇵🇹"),
+    "mls": dict(es="mls", fd="mls", of=None, fcsv=None, calendar=True, espn="usa.1", tz=-5,
+                name="MLS", short="MLS", flag="🇺🇸"),
 }
+
+# Liga com temporada no ano civil (MLS): muda rótulo e janela da temporada.
+CAL = False
 
 SRC_ES = "jalapic/engsoccerdata"
 SRC_FCSV = "footballcsv (openfootball)"
 SRC_OF = "openfootball/football.json"
 SRC_FD = "football-data.co.uk"
 SRC_RSSSF = "RSSSF"
+SRC_ESPN = "ESPN"
 
 # Temporadas em que o engsoccerdata traz a mesma data para o campeonato
 # inteiro (1º de julho do ano seguinte) e não há outra fonte com datas.
@@ -60,7 +70,7 @@ NO_DATES = {"ligue-1": set(range(1932, 1937))}
 
 
 def label(y):
-    return f"{y}-{(y + 1) % 100:02d}"
+    return str(y) if CAL else f"{y}-{(y + 1) % 100:02d}"
 
 
 def norm(s):
@@ -94,6 +104,8 @@ def parse_date(s):
 
 def in_season(d, season):
     """Julho do ano de início a agosto do ano seguinte (2019-20 acabou em agosto)."""
+    if CAL:
+        return date(season, 1, 1) <= d <= date(season, 12, 31)
     return date(season, 7, 1) <= d <= date(season + 1, 8, 31)
 
 
@@ -101,15 +113,26 @@ def in_season(d, season):
 
 
 def load_engsoccer(cfg):
-    rows = []
+    rows, seen = [], set()
     with (RAW / "engsoccerdata" / f"{cfg['es']}.csv").open(encoding="utf-8") as f:
         for r in csv.DictReader(f):
-            if r["tier"] != "1":
+            if r.get("tier", "1") != "1":
                 continue
-            stage = "Fase 2" if r.get("round") == "phase2" else ""
-            rows.append(dict(season=int(r["Season"]), date=date.fromisoformat(r["Date"]), stage=stage,
-                             round="", home_raw=r["home"], away_raw=r["visitor"],
-                             hg=int(r["hgoal"]), ag=int(r["vgoal"]), source=SRC_ES))
+            rnd = r.get("round") or ""
+            stage = {"phase2": "Fase 2", "play_in": "Playoffs: play-in", "conf_semi": "Playoffs: semifinal de conferência",
+                     "conf_final": "Playoffs: final de conferência", "mls_final": "Playoffs: final"}.get(rnd, "")
+            row = dict(season=int(r["Season"]), date=date.fromisoformat(r["Date"]), stage=stage,
+                       round="", home_raw=r["home"], away_raw=r["visitor"],
+                       hg=int(r["hgoal"]), ag=int(r["vgoal"]), source=SRC_ES)
+            if r.get("hgoalaet") not in (None, "", "NA"):
+                row["hg"], row["ag"], row["extra_time"] = int(r["hgoalaet"]), int(r["vgoalaet"]), "1"
+            if r.get("hpen") not in (None, "", "NA"):
+                row["pens_home"], row["pens_away"] = r["hpen"], r["vpen"]
+            key = (row["season"], row["date"], row["home_raw"], row["away_raw"], row["hg"], row["ag"])
+            if key in seen:
+                continue  # linha repetida no engsoccerdata
+            seen.add(key)
+            rows.append(row)
     return rows
 
 
@@ -132,6 +155,8 @@ def load_fcsv(cfg):
 
 def load_of(cfg):
     rows = []
+    if not cfg["of"]:
+        return rows
     for p in sorted((RAW / "openfootball").glob(f"*-{cfg['of']}.json")):
         season = int(p.name[:4])
         for m in json.loads(p.read_text(encoding="utf-8"))["matches"]:
@@ -150,9 +175,16 @@ def load_of(cfg):
 def load_fd(cfg):
     rows = []
     for p in sorted((RAW / "football-data").glob(f"{cfg['fd']}-*.csv")):
-        season = int(p.name[len(cfg["fd"]) + 1:][:4])
+        season = int(p.name[len(cfg["fd"]) + 1:][:4]) if p.name[len(cfg["fd"]) + 1:][:4].isdigit() else None
         with p.open(encoding="utf-8-sig", errors="replace") as f:
             for r in csv.DictReader(f):
+                if "Home" in r:  # arquivo único das ligas "novas" (todas as temporadas)
+                    if r.get("HG") in ("", None):
+                        continue
+                    rows.append(dict(season=int(r["Season"][:4]), date=parse_date(r["Date"]), round="",
+                                     home_raw=r["Home"].strip(), away_raw=r["Away"].strip(),
+                                     hg=int(float(r["HG"])), ag=int(float(r["AG"])), source=SRC_FD))
+                    continue
                 if not r.get("HomeTeam") or r.get("FTHG") in ("", None):
                     continue
                 rows.append(dict(season=season, date=parse_date(r["Date"]), round="",
@@ -331,6 +363,41 @@ def map_crosstable(sec, rows, clubs):
             agree[m["season"]] += score[k] == (m["hg"], m["ag"])
     bad = {s for s in total if agree[s] < 0.8 * total[s]}
     return [m for m in out if m["season"] not in bad], sorted(bad)
+
+
+def load_espn(cfg):
+    """Placar da ESPN (scoreboard por ano): já inclui a prorrogação; pênaltis à parte.
+    A data vem em UTC: tira o fuso da liga para cair no dia local."""
+    code = cfg.get("espn")
+    if not code:
+        return []
+    from datetime import datetime
+    rows, seen = [], set()
+    for p in sorted((RAW / "espn" / code).glob("*.json")):
+        for e in json.loads(p.read_text(encoding="utf-8")).get("events", []):
+            c = e["competitions"][0]
+            st = c["status"]["type"]["name"]
+            slug = (e.get("season") or {}).get("slug") or ""
+            if e["id"] in seen or st not in ("STATUS_FULL_TIME", "STATUS_FINAL_AET", "STATUS_FINAL_PEN"):
+                continue
+            names = " ".join(x["team"]["displayName"] for x in c["competitors"])
+            if any(x in slug for x in ("all-star", "preseason", "mls-is-back")) or "All-Star" in names:
+                continue
+            seen.add(e["id"])
+            when = datetime.fromisoformat(e["date"].replace("Z", "+00:00")) + timedelta(hours=cfg.get("tz", 0))
+            side = {x["homeAway"]: x for x in c["competitors"]}
+            h, a = side["home"], side["away"]
+            row = dict(season=when.year if CAL else (when.year if when.month >= 7 else when.year - 1),
+                       date=when.date(), round="", home_raw=h["team"]["displayName"], away_raw=a["team"]["displayName"],
+                       hg=int(h["score"]), ag=int(a["score"]), source=SRC_ESPN)
+            if not slug.startswith("regular-season"):
+                row["stage"] = "Playoffs: " + slug.replace("---", " – ").replace("-", " ")
+            if st != "STATUS_FULL_TIME":
+                row["extra_time"] = "1"
+            if h.get("shootoutScore") is not None:
+                row["pens_home"], row["pens_away"] = str(h["shootoutScore"]), str(a["shootoutScore"])
+            rows.append(row)
+    return rows
 
 
 # ---------------------------------------------------------------- clubes
@@ -542,7 +609,7 @@ def crosscheck(rows, sec, sus, stats, notes, whole_seasons=True):
         r.setdefault("seen", []).append(src)
     for m in added:
         stats[(m["season"], src)]["added"] += 1
-        rows.append({**m, "stage": "", "seen": []})
+        rows.append({"stage": "", **m, "seen": []})
     for r in rows:
         if r["season"] in covered and id(r) not in used and r["source"] != src and src not in r.get("seen", []):
             stats[(r["season"], src)]["missing"] += 1
@@ -576,7 +643,10 @@ def rsssf_blocks(league):
     d = RAW / "rsssf"
     text = lambda p: re.sub(r"<[^>]+>", " ", p.read_text(encoding="latin-1"))
     out = {}
-    pre = {"serie-a": "ital", "bundesliga": "duit", "premier-league": "eng", "la-liga": "span", "ligue-1": "fran"}[league]
+    pre = {"serie-a": "ital", "bundesliga": "duit", "premier-league": "eng", "la-liga": "span", "ligue-1": "fran",
+           "eredivisie": "ned", "primeira-liga": "port"}.get(league)
+    if pre is None:
+        return out
     for p in d.glob(f"{pre}*.html"):
         m = re.fullmatch(rf"{pre}(\d{{2}}|\d{{4}})\.html", p.name)
         if m:
@@ -669,7 +739,7 @@ def build(league, existing, blocks):
     stats = defaultdict(Counter)
     all_diffs = []
     secs = []
-    for loader in (load_fcsv, load_rsssf_ita, load_rsssf_fra, load_of, load_fd):
+    for loader in (load_fcsv, load_rsssf_ita, load_rsssf_fra, load_espn, load_of, load_fd):
         sec = loader(cfg)
         if not sec:
             continue
@@ -728,6 +798,10 @@ def build(league, existing, blocks):
     # fonte = B x A da outra) não contam: só muda o mando.
     by_row = defaultdict(list)
     for r, m in all_diffs:
+        if r.get("extra_time") and m["source"] == SRC_FD:
+            continue  # football-data dá o placar dos 90 minutos; aqui vale o da prorrogação
+        if m["date"] is not None and abs((r["date"] - m["date"]).days) > 2:
+            continue  # casou com jogo de outra data (ida e volta, playoff): não serve para trocar placar
         by_row[id(r)].append((r, m))
     score_notes = []
     lines_of = {}
@@ -763,7 +837,8 @@ def build(league, existing, blocks):
         else:
             score_notes.append(tag + f"mantido {old[0]}-{old[1]}" + (f" ({why})" if why else "") + f"; {srcs}")
     for (season, home, away), fix in FIXES.get(league, {}).items():
-        hit = [r for r in rows if (r["season"], r["home"], r["away"]) == (season, home, away)]
+        hit = [r for r in rows if (r["season"], r["home"], r["away"]) == (season, home, away)
+               and ("on" not in fix or r["date"].isoformat() == fix["on"])]
         if len(hit) != 1:
             sys.exit(f"{league}: correção manual sem jogo único: {season} {home} x {away}")
         r = hit[0]
@@ -792,7 +867,8 @@ def write(league, res, existing):
     for r in sorted(rows, key=lambda r: (r["date"], r["home"])):
         out.append(dict(league=league, season=r["season"], date=r["date"].isoformat(), stage=r.get("stage", ""),
                         round=r["round"], home=r["home"], away=r["away"], home_goals=r["hg"],
-                        away_goals=r["ag"], extra_time="", pens_home="", pens_away="", neutral="",
+                        away_goals=r["ag"], extra_time=r.get("extra_time", ""), pens_home=r.get("pens_home", ""),
+                        pens_away=r.get("pens_away", ""), neutral="",
                         status=r.get("status", ""), note=r.get("note", ""), source=r["source"]))
     with (OUT / f"{league}.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
@@ -819,10 +895,11 @@ def report(league, res, out, checks):
     L += ["", "## Jogos por temporada", "",
           "Colunas das fontes: jogos casados / divergências de data / jogos que só a fonte tinha (acrescentados). "
           "RSSSF: times cuja linha (J V E D GP GC) bate com a tabela final.", "",
-          "| Temporada | Jogos | footballcsv | RSSSF (jogos) | openfootball | football-data | RSSSF (tabela) |", "|---|---|---|---|---|---|---|"]
+          "| Temporada | Jogos | footballcsv | RSSSF (jogos) | ESPN | openfootball | football-data | RSSSF (tabela) |",
+          "|---|---|---|---|---|---|---|---|"]
     for s in sorted(seasons):
         cells = []
-        for src in (SRC_FCSV, SRC_RSSSF, SRC_OF, SRC_FD):
+        for src in (SRC_FCSV, SRC_RSSSF, SRC_ESPN, SRC_OF, SRC_FD):
             x = st.get((s, src))
             cells.append(f"{x['matched']} / {x['date_diff']} / {x['added']}" if x else "–")
         c = checks.get(s)
@@ -854,7 +931,9 @@ def report(league, res, out, checks):
 def main():
     wanted = sys.argv[1:] or list(LEAGUES)
     clubs_path = ROOT / "data" / "clubs.json"
+    global CAL
     for league in wanted:
+        CAL = LEAGUES[league].get("calendar", False)
         existing = json.loads(clubs_path.read_text(encoding="utf-8"))
         blocks = rsssf_blocks(league)
         res = build(league, existing, blocks)
@@ -865,6 +944,8 @@ def main():
         # cadastro: substitui só os clubes desta liga, mantém o resto como está
         existing = json.loads(clubs_path.read_text(encoding="utf-8"))
         mine = res["clubs"].entries
+        for slug, e in mine.items():
+            e["country"] = CLUB_COUNTRY.get(slug, e["country"])
         used = {r["home"] for r in out} | {r["away"] for r in out}
         merged = [c for c in existing if c["slug"] not in mine]
         merged += [e for s, e in mine.items() if s in used]
@@ -877,7 +958,7 @@ def main():
                  "country": COUNTRY[league][0], "flag": LEAGUES[league]["flag"],
                  "since": min(r["season"] for r in out)}
         old = next((lg for lg in leagues if lg["slug"] == league), {})
-        entry = {**old, **entry, "split": True, "fem": True}  # temporada 2024/25; "da Premier League"
+        entry = {**old, **entry, "split": not CAL, "fem": True}  # temporada 2024/25; "da Premier League"
         leagues = [entry if lg["slug"] == league else lg for lg in leagues] if old else leagues + [entry]
         lp.write_text("[\n" + ",\n".join("  " + json.dumps(lg, ensure_ascii=False) for lg in leagues) + "\n]\n",
                       encoding="utf-8")
