@@ -96,7 +96,7 @@ const base = previewBase(Astro.url.pathname);
       }
       <slot />
     </main>
-    <footer class="site">
+    <footer class="site" data-azeredo-assinatura>
       <p>{T.footerX} <a href="https://x.com/ScorigamiFC">@ScorigamiFC</a></p>
       <p><a href={h("sobre")}>{T.footerAbout}</a> · <a href={h("ajuste")} id="report-link">{T.footerReport}</a></p>
     </footer>
@@ -126,5 +126,6 @@ const base = previewBase(Astro.url.pathname);
         } catch {}
       });
     </script>
+    <script is:inline src="https://azeredo.app/assinatura.js" defer></script>
   </body>
 </html>
