@@ -63,6 +63,7 @@ export async function initHome() {
   );
 
   const data = await loadData();
+  const full = gridSize(data.matches);
   const leagueOf = new Map(data.leagues.map((l) => [l.slug, l]));
   const clubLeague = new Map<string, string>();
   for (const m of data.matches) clubLeague.set(m.home, m.league);
@@ -123,7 +124,7 @@ export async function initHome() {
 
     $("counter").innerHTML = T.showing(shown.length, data.matches.length);
     // O grid encolhe com o filtro: vai até uma linha acima do maior número de gols do recorte.
-    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(shown), color });
+    paintGrid($("grid"), ctx, shown, { mode, size: gridSize(shown), full, color });
     const [y0, y1] = seasonRange(shown);
     const yl = (s: number) => (one ? ctx.season(one, s) : String(s));
     $("legend").innerHTML = shown.length ? legendHtml(ctx, color === "first" ? [yl(y0), yl(y1)] : undefined) : "";

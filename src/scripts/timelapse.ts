@@ -29,7 +29,7 @@ export async function initTimelapse() {
   function buildGrid(pool: Match[]) {
     const size = gridSize(pool);
     const holder = $("tl-grid");
-    holder.innerHTML = gridHtml(data.ctx(ligaSel?.value || "todas"), [], { mode, size });
+    holder.innerHTML = gridHtml(data.ctx(ligaSel?.value || "todas"), [], { mode, size, full: gridSize(data.matches) });
     holder.querySelector("figure.chart")!.classList.add("by-year");
     nodes.clear();
     holder.querySelectorAll<HTMLElement>(".cell").forEach((el) => nodes.set(el.dataset.k!, el));

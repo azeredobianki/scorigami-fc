@@ -79,6 +79,8 @@ export function level(count: number, max: number): number {
 export interface GridOptions {
   mode: Mode;
   size?: number;
+  /** Tamanho do grid completo da página: com filtro, as casas mantêm o tamanho que teriam nele. */
+  full?: number;
   /** Placares a destacar com um anel (chave "a-b"). */
   ring?: Set<string>;
   /** Rótulos dos eixos, quando o grid não é de mandante × visitante. */
@@ -135,7 +137,7 @@ export function gridHtml(ctx: Ctx, matches: Match[], opt: GridOptions): string {
   const { size, cells } = gridCells(ctx, matches, opt);
   const [rowLabel, colLabel] =
     opt.labels ?? (opt.mode === "norm" ? ctx.t.axisNorm : ctx.t.axisMando);
-  let html = `<figure class="chart" data-size="${size}" data-mode="${opt.mode}" style="--n:${size + 1}">`;
+  let html = `<figure class="chart" data-size="${size}" data-mode="${opt.mode}" style="--n:${size + 1};--full:${Math.max(size, opt.full ?? size) + 1}">`;
   html += `<div class="y-label">${rowLabel}</div><div class="y-ticks">`;
   for (let a = size; a >= 0; a--) html += `<span>${a}</span>`;
   html += `</div><div class="cells">`;

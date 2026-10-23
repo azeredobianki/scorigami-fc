@@ -346,6 +346,7 @@ figure.chart {
   color: var(--muted);
   font-family: var(--mono);
   text-align: right;
+  min-width: 2ch; /* mesma largura com 1 ou 2 dígitos, para as casas não mudarem de tamanho */
 }
 
 .y-ticks span,
@@ -362,6 +363,8 @@ figure.chart {
 .cells {
   grid-row: 1;
   grid-column: 3;
+  /* Com filtro, o grid tem menos casas mas cada casa mantém o tamanho do grid completo (--full). */
+  width: calc((100% + 3px) * var(--n) / var(--full, var(--n)) - 3px);
   display: grid;
   grid-template-columns: repeat(var(--n), 1fr);
   gap: 3px;
@@ -370,6 +373,7 @@ figure.chart {
 .x-ticks {
   grid-row: 2;
   grid-column: 3;
+  width: calc((100% + 3px) * var(--n) / var(--full, var(--n)) - 3px);
   display: grid;
   grid-template-columns: repeat(var(--n), 1fr);
   gap: 3px;
@@ -381,6 +385,7 @@ figure.chart {
 .x-label {
   grid-row: 3;
   grid-column: 3;
+  width: calc((100% + 3px) * var(--n) / var(--full, var(--n)) - 3px);
   text-align: center;
   font-size: 0.75rem;
   color: var(--muted);
