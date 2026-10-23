@@ -1,0 +1,69 @@
+---
+// Confronto direto entre dois times. A página é desenhada no navegador a partir
+// da escolha dos times (?a=internacional&b=gremio&mando=1), em scripts/h2h.ts.
+import Base from "../layouts/Base.astro";
+import { clubs, leagues, matches } from "../lib/data";
+import { t, type Lang } from "../lib/i18n";
+import { esc } from "../lib/render";
+
+const { lang } = Astro.props as { lang: Lang };
+const T = t(lang);
+// Times agrupados pela liga em que mais jogaram.
+const games = new Map<string, Map<string, number>>();
+for (const m of matches)
+  for (const c of [m.home, m.away]) {
+    const byLeague = games.get(c) ?? new Map<string, number>();
+    byLeague.set(m.league, (byLeague.get(m.league) ?? 0) + 1);
+    games.set(c, byLeague);
+  }
+const mainLeague = (slug: string) => [...games.get(slug)!.entries()].sort((x, y) => y[1] - x[1])[0][0];
+const groups = leagues.map((l) => ({
+  league: l,
+  clubs: clubs.filter((c) => games.has(c.slug) && mainLeague(c.slug) === l.slug).sort((a, b) => a.name.localeCompare(b.name, T.locale)),
+}));
+const options = (selected: string) =>
+  groups
+    .map(
+      (g) =>
+        `<optgroup label="${esc(g.league.short)}">${g.clubs
+          .map((c) => `<option value="${c.slug}"${c.slug === selected ? " selected" : ""}>${esc(c.name)}</option>`)
+          .join("")}</optgroup>`,
+    )
+    .join("");
+---
+
+<Base lang={lang} title={T.h2hTitle} description={T.h2hDesc} active="confrontos">
+  <h1>{T.h2hTitle}</h1>
+  <p>{T.h2hIntro}</p>
+
+  <form class="filters" id="h2h" onsubmit="return false">
+    <div class="field">
+      <span class="field-label" id="h2h-lbl-a">{T.h2hTeamA}</span>
+      <select name="a" aria-labelledby="h2h-lbl-a" set:html={options("internacional")}></select>
+    </div>
+    <button type="button" class="swap" id="h2h-swap" aria-label={T.h2hSwap} title={T.h2hSwap}>⇄</button>
+    <div class="field">
+      <span class="field-label" id="h2h-lbl-b">{T.h2hTeamB}</span>
+      <select name="b" aria-labelledby="h2h-lbl-b" set:html={options("gremio")}></select>
+    </div>
+    <div class="field">
+      <span class="field-label">{T.h2hMode}</span>
+      <div class="switch" role="group" aria-label={T.h2hMode}>
+        <button type="button" data-mode="any" aria-pressed="true">{T.h2hAny}</button>
+        <button type="button" data-mode="home" aria-pressed="false" id="h2h-home">{T.modeMando}</button>
+      </div>
+    </div>
+  </form>
+
+  <div id="h2h-summary"><p class="muted">{T.loading}…</p></div>
+  <div id="h2h-grid"></div>
+  <div id="h2h-legend"></div>
+  <div id="h2h-facts"></div>
+  <h2 id="h2h-games-title">{T.h2hGames}</h2>
+  <div id="h2h-games"></div>
+
+  <script>
+    import { initH2H } from "../scripts/h2h";
+    initH2H();
+  </script>
+</Base>

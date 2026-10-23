@@ -160,7 +160,7 @@ function pt() {
       `${P(n, "scorigami", "scorigamis")} ${L.in(lg, lg.name)} ${s}: os placares que aconteceram pela primeira vez.`,
 
     // Layout
-    nav: { grafico: "Gráfico", scorigamis: "Scorigamis", times: "Times", timelapse: "Time-lapse", sobre: "Sobre" },
+    nav: { grafico: "Gráfico", scorigamis: "Scorigamis", times: "Times", timelapse: "Time-lapse", confrontos: "Confrontos", sobre: "Sobre" },
     themeLabel: "Alternar modo escuro",
     themeTitle: "Modo escuro",
     langLabel: "Idioma",
@@ -292,6 +292,27 @@ function pt() {
     rFail: "Não deu para enviar agora. Tente de novo ou mande pelo X: @ScorigamiFC.",
 
     /** Observações dos jogos vêm em português nos dados. */
+    // Confrontos
+    h2hTitle: "Confrontos",
+    h2hDesc: "Todos os placares do confronto direto entre dois times, com ou sem levar o mando de campo em conta.",
+    h2hIntro: "Escolha dois times para ver todos os placares do confronto direto. Em \"Qualquer mando\", o placar é contado do lado do primeiro time, jogando em casa ou fora. Na outra opção, só entram os jogos com o primeiro time em casa.",
+    h2hTeamA: "Time 1",
+    h2hTeamB: "Time 2",
+    h2hSwap: "Inverter times",
+    h2hMode: "Mando",
+    h2hAny: "Qualquer mando",
+    h2hHome: (a: string) => `${a} em casa`,
+    h2hPick: "Escolha um time",
+    h2hNoGames: (a: string, b: string) => `${a} e ${b} nunca se enfrentaram nas competições do site.`,
+    h2hNoHome: (a: string, b: string) => `${a} nunca recebeu ${b} em casa nas competições do site.`,
+    h2hSummary: (n: number, a: string, wa: number, d: number, b: string, wb: number) =>
+      `${P(n, "jogo", "jogos")}: ${P(wa, "vitória", "vitórias")} do ${a}, ${P(d, "empate", "empates")} e ${P(wb, "vitória", "vitórias")} do ${b}.`,
+    h2hGoals: (a: string, ga: number, b: string, gb: number) => `Gols: ${a} ${N(ga)}, ${b} ${N(gb)}.`,
+    h2hScores: (n: number) => `${P(n, "placar diferente", "placares diferentes")}.`,
+    h2hAxis: (a: string, b: string) => [`Gols do ${a}`, `Gols do ${b}`] as [string, string],
+    h2hBiggest: (team: string) => `Maior vitória do ${team}`,
+    h2hCommon: "Placar mais comum",
+    h2hGames: "Todos os jogos",
     note: (s: string) => s,
   };
 }
@@ -384,7 +405,7 @@ function en(): Dict {
     seasonTitle: (lg, s) => `${lg.short} ${s} scorigamis`,
     seasonDesc: (n, lg, s) => `${P(n, "scorigami", "scorigamis")} ${L.in(lg, lg.name)} ${s}: the scores that happened for the first time.`,
 
-    nav: { grafico: "Chart", scorigamis: "Scorigamis", times: "Teams", timelapse: "Time-lapse", sobre: "About" },
+    nav: { grafico: "Chart", scorigamis: "Scorigamis", times: "Teams", timelapse: "Time-lapse", confrontos: "Head to head", sobre: "About" },
     themeLabel: "Toggle dark mode",
     themeTitle: "Dark mode",
     langLabel: "Language",
@@ -507,6 +528,25 @@ function en(): Dict {
     rOk: "Received, thank you. We'll check it against the sources.",
     rNoWay: "Couldn't send from here. Reach us on X: @ScorigamiFC.",
     rFail: "Couldn't send right now. Try again or reach us on X: @ScorigamiFC.",
+    h2hTitle: "Head to head",
+    h2hDesc: "Every score in the head-to-head record between two teams, with or without home advantage taken into account.",
+    h2hIntro: "Pick two teams to see every score in their head-to-head record. With \"Any venue\", the score is counted from the first team's side, home or away. With the other option, only games with the first team at home count.",
+    h2hTeamA: "Team 1",
+    h2hTeamB: "Team 2",
+    h2hSwap: "Swap teams",
+    h2hMode: "Venue",
+    h2hAny: "Any venue",
+    h2hHome: (a) => `${a} at home`,
+    h2hPick: "Pick a team",
+    h2hNoGames: (a, b) => `${a} and ${b} have never met in the competitions on this site.`,
+    h2hNoHome: (a, b) => `${a} have never hosted ${b} in the competitions on this site.`,
+    h2hSummary: (n, a, wa, d, b, wb) => `${P(n, "game", "games")}: ${P(wa, "win", "wins")} for ${a}, ${P(d, "draw", "draws")} and ${P(wb, "win", "wins")} for ${b}.`,
+    h2hGoals: (a, ga, b, gb) => `Goals: ${a} ${N(ga)}, ${b} ${N(gb)}.`,
+    h2hScores: (n) => `${P(n, "different score", "different scores")}.`,
+    h2hAxis: (a, b) => [`${a} goals`, `${b} goals`],
+    h2hBiggest: (team) => `${team}'s biggest win`,
+    h2hCommon: "Most common score",
+    h2hGames: "All games",
     note: (s) =>
       s
         .replace(/^pênaltis /, "penalties ")
@@ -603,7 +643,7 @@ function es(): Dict {
     seasonTitle: (lg, s) => `Scorigamis ${L.of(lg)} ${s}`,
     seasonDesc: (n, lg, s) => `${P(n, "scorigami", "scorigamis")} ${L.in(lg, lg.name)} ${s}: los marcadores que ocurrieron por primera vez.`,
 
-    nav: { grafico: "Gráfico", scorigamis: "Scorigamis", times: "Equipos", timelapse: "Time-lapse", sobre: "Acerca de" },
+    nav: { grafico: "Gráfico", scorigamis: "Scorigamis", times: "Equipos", timelapse: "Time-lapse", confrontos: "Cara a cara", sobre: "Acerca de" },
     themeLabel: "Cambiar modo oscuro",
     themeTitle: "Modo oscuro",
     langLabel: "Idioma",
@@ -726,6 +766,25 @@ function es(): Dict {
     rOk: "Recibido, gracias. Lo revisaremos con las fuentes.",
     rNoWay: "No se pudo enviar desde aquí. Escríbenos en X: @ScorigamiFC.",
     rFail: "No se pudo enviar ahora. Inténtalo de nuevo o escríbenos en X: @ScorigamiFC.",
+    h2hTitle: "Cara a cara",
+    h2hDesc: "Todos los marcadores del historial entre dos equipos, teniendo en cuenta la localía o no.",
+    h2hIntro: "Elige dos equipos para ver todos los marcadores de su historial. Con \"Cualquier localía\", el marcador se cuenta del lado del primer equipo, de local o de visitante. Con la otra opción, solo entran los partidos con el primer equipo de local.",
+    h2hTeamA: "Equipo 1",
+    h2hTeamB: "Equipo 2",
+    h2hSwap: "Invertir equipos",
+    h2hMode: "Localía",
+    h2hAny: "Cualquier localía",
+    h2hHome: (a) => `${a} de local`,
+    h2hPick: "Elige un equipo",
+    h2hNoGames: (a, b) => `${a} y ${b} nunca se enfrentaron en las competiciones del sitio.`,
+    h2hNoHome: (a, b) => `${a} nunca recibió a ${b} en las competiciones del sitio.`,
+    h2hSummary: (n, a, wa, d, b, wb) => `${P(n, "partido", "partidos")}: ${P(wa, "victoria", "victorias")} de ${a}, ${P(d, "empate", "empates")} y ${P(wb, "victoria", "victorias")} de ${b}.`,
+    h2hGoals: (a, ga, b, gb) => `Goles: ${a} ${N(ga)}, ${b} ${N(gb)}.`,
+    h2hScores: (n) => `${P(n, "marcador distinto", "marcadores distintos")}.`,
+    h2hAxis: (a, b) => [`Goles de ${a}`, `Goles de ${b}`],
+    h2hBiggest: (team) => `Mayor victoria de ${team}`,
+    h2hCommon: "Marcador más común",
+    h2hGames: "Todos los partidos",
     note: (s) =>
       s
         .replace(/^pênaltis /, "penales ")

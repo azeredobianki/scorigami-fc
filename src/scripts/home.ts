@@ -143,7 +143,7 @@ export async function initHome() {
       if (mode === "mando") q.set("mando", "1");
       if (color === "first") q.set("cor", "first");
       const qs = q.toString();
-      history.replaceState(null, "", qs ? `?${qs.replace(/%2C/g, ",")}` : location.pathname);
+      history.replaceState(null, "", qs ? `${location.pathname}?${qs.replace(/%2C/g, ",")}` : location.pathname);
     }
   }
 
